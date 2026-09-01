@@ -101,6 +101,9 @@ def main():
         card['source'] = f"references/shots/{card['category']}/{card['name']}.md"
         if card['name'] in touched:
             card['updatedAt'] = now
+        # 新卡首次入 library.json 时打 addedAt（NEW 徽标的数据源，之后不再变；
+        # 徽标显示窗口见 app.js 的 NEW_WINDOW_MS）
+        card.setdefault('addedAt', now)
         if len(card.get('styles', [])) == 1:
             card['styles'][0]['description'] = card['summary']
         for style in card.get('styles', []):
@@ -124,6 +127,10 @@ def main():
     LIB.write_text(json.dumps(lib, ensure_ascii=False) + '\n', encoding='utf-8')
     print(f"synced {len(lib['cards'])} cards ({lib['stats']['styleCount']} styles, "
           f"{lib['stats']['previewCount']} previews); missing card files: {missing or 'none'}")
+    if missing:
+        # 卡的 md 已删但 library.json 还留着条目 = Gallery 会渲染一张
+        # source 链接指向虚空的卡；硬失败让删卡 PR 在 CI 就暴露
+        raise SystemExit(f'orphan library.json entries (card md deleted): {missing}')
 
 
 if __name__ == '__main__':

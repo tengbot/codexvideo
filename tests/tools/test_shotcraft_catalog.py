@@ -8,15 +8,15 @@ from tools.tool_registry import ToolRegistry
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-COMMIT = "0022ec45d28800cecb5b16624a3179093c93f4e9"
+COMMIT = "00371a361f8242ee5d35db19a7530fb9fbcacc0e"
 
 
 def test_complete_shotcraft_mirror_and_registry():
     result = ShotcraftCatalog().execute({"operation": "verify"})
     assert result.success is True, result.error
-    assert result.data["card_count"] == 104
-    assert result.data["style_count"] == 161
-    assert result.data["preview_count"] == 161
+    assert result.data["card_count"] == 155
+    assert result.data["style_count"] == 212
+    assert result.data["preview_count"] == 212
     assert result.data["commit"] == COMMIT
     assert (ROOT / ".agents/skills/video-shotcraft/LICENSE").is_file()
     assert "shot_language_plan" in ARTIFACT_NAMES

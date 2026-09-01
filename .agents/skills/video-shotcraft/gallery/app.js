@@ -45,19 +45,22 @@ const elements = {
   clearFilters: document.querySelector('#clearFilters'),
   emptyState: document.querySelector('#emptyState'),
   filters: document.querySelector('#filters'),
-  languageSwitch: document.querySelector('#languageSwitch'),
+  languageToggle: document.querySelector('#languageToggle'),
+  languageToggleLabel: document.querySelector('#languageToggleLabel'),
   library: document.querySelector('#library'),
   pageTitle: document.querySelector('#pageTitle'),
   previewCount: document.querySelector('#previewCount'),
   searchInput: document.querySelector('#searchInput'),
   styleCount: document.querySelector('#styleCount'),
-  syncStatus: document.querySelector('#syncStatus'),
-  themeSwitch: document.querySelector('#themeSwitch'),
+  themeToggle: document.querySelector('#themeToggle'),
+  themeToggleLabel: document.querySelector('#themeToggleLabel'),
   toast: document.querySelector('#toast'),
   selectionBar: document.querySelector('#selectionBar'),
   selectionCount: document.querySelector('#selectionCount'),
   copySelected: document.querySelector('#copySelected'),
   clearSelected: document.querySelector('#clearSelected'),
+  followMenu: document.querySelector('.follow-menu'),
+  followTrigger: document.querySelector('.follow-trigger'),
 };
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (character) => ({
@@ -69,6 +72,11 @@ const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (character)
 }[character]));
 
 const text = (key) => translations.ui[state.language][key] || key;
+// 入库 14 天内的卡在卡片和分类导航上挂 NEW 徽标（过期自动消失，无需维护）；
+// addedAt 由 sync 脚本在卡首次进 library.json 时写死，之后编辑只动 updatedAt
+const NEW_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const isNewCard = (card) =>
+  Boolean(card.addedAt) && Date.now() - Date.parse(card.addedAt) < NEW_WINDOW_MS;
 const cardName = (card) => state.language === 'zh'
   ? translations.cardsZh[card.name] || card.name
   : card.name;
@@ -98,18 +106,17 @@ function resolveTheme(choice = state.theme) {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+// 单键切换：标签/图标写的是"点了会变成什么"。state.theme 初值 system，
+// 首次点击才落到显式 light/dark，所以没点过的用户仍跟随系统。
 function applyTheme() {
   const resolved = resolveTheme();
   document.documentElement.dataset.theme = resolved;
   document.documentElement.dataset.themeChoice = state.theme;
   document.documentElement.style.colorScheme = resolved;
-  elements.themeSwitch.setAttribute('aria-label', text('themeLabel'));
-  elements.themeSwitch.querySelectorAll('[data-theme]').forEach((button) => {
-    const active = button.dataset.theme === state.theme;
-    button.classList.toggle('is-active', active);
-    button.setAttribute('aria-pressed', String(active));
-    button.textContent = text(`theme${button.dataset.theme[0].toUpperCase()}${button.dataset.theme.slice(1)}`);
-  });
+  const next = resolved === 'dark' ? 'light' : 'dark';
+  elements.themeToggle.dataset.next = next;
+  elements.themeToggle.setAttribute('aria-label', text(next === 'dark' ? 'themeToDark' : 'themeToLight'));
+  elements.themeToggleLabel.textContent = text(next === 'dark' ? 'themeDark' : 'themeLight');
 }
 
 function applyLanguage() {
@@ -123,16 +130,29 @@ function applyLanguage() {
     node.setAttribute('aria-label', text(node.dataset.i18nAriaLabel));
   });
   elements.searchInput.placeholder = text('searchPlaceholder');
-  elements.languageSwitch.setAttribute('aria-label', state.language === 'zh' ? '语言' : 'Language');
-  elements.languageSwitch.querySelectorAll('[data-language]').forEach((button) => {
-    const active = button.dataset.language === state.language;
-    button.classList.toggle('is-active', active);
-    button.setAttribute('aria-pressed', String(active));
-  });
+  elements.languageToggleLabel.textContent = state.language === 'zh' ? 'EN' : '中文';
+  elements.languageToggle.setAttribute('aria-label', text('languageToggle'));
   applyTheme();
   updateSelectionBar();
-  setSyncStatus('ready', state.hasLoaded ? text('synced') : text('scanning'));
 }
+
+function setFollowMenuOpen(open) {
+  elements.followMenu?.classList.toggle('is-open', open);
+  elements.followTrigger?.setAttribute('aria-expanded', String(open));
+}
+
+elements.followMenu?.addEventListener('pointerenter', () => setFollowMenuOpen(true));
+elements.followMenu?.addEventListener('pointerleave', () => setFollowMenuOpen(false));
+elements.followMenu?.addEventListener('focusin', () => setFollowMenuOpen(true));
+elements.followMenu?.addEventListener('focusout', (event) => {
+  if (!elements.followMenu.contains(event.relatedTarget)) setFollowMenuOpen(false);
+});
+elements.followTrigger?.addEventListener('click', () => {
+  setFollowMenuOpen(true);
+});
+document.addEventListener('click', (event) => {
+  if (!elements.followMenu?.contains(event.target)) setFollowMenuOpen(false);
+});
 
 function mediaMarkup(style, cardIndex) {
   const title = escapeHtml(styleName(style));
@@ -149,13 +169,13 @@ function mediaMarkup(style, cardIndex) {
   if (style.media.type === 'gif') {
     return `
       <figure class="preview">
-        <img class="lazy-media" data-src="${style.media.url}" alt="${title}" loading="lazy">
+        <img class="lazy-media" data-src="${escapeHtml(style.media.url)}" alt="${title}" loading="lazy">
       </figure>`;
   }
 
   return `
     <figure class="preview">
-      <video class="lazy-media" data-src="${style.media.url}" muted loop playsinline preload="none"
+      <video class="lazy-media" data-src="${escapeHtml(style.media.url)}" muted loop playsinline preload="none"
         aria-label="${title}" data-key="${cardIndex}"></video>
       <button class="video-expand" type="button" aria-label="${escapeHtml(text('fullscreen'))} ${title}"
         data-expand-key="${cardIndex}" title="${escapeHtml(text('fullscreen'))}">
@@ -202,7 +222,7 @@ function cardMarkup(card, cardIndex) {
       <div class="card-body">
         <div class="card-title-row">
           <div class="card-title">
-            <h3>${escapeHtml(title)}</h3>
+            <h3>${escapeHtml(title)}${isNewCard(card) ? ' <span class="new-badge">NEW</span>' : ''}</h3>
             ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}
           </div>
         </div>
@@ -307,11 +327,6 @@ function observeMedia() {
   document.querySelectorAll('.lazy-media').forEach((media) => mediaObserver.observe(media));
 }
 
-function setSyncStatus(mode, label) {
-  elements.syncStatus.dataset.state = mode;
-  elements.syncStatus.lastElementChild.textContent = label;
-}
-
 let toastTimer;
 function showToast(message) {
   elements.toast.textContent = message;
@@ -323,7 +338,6 @@ function showToast(message) {
 }
 
 async function loadLibrary({silent = false} = {}) {
-  if (!silent) setSyncStatus('loading', text('scanning'));
   try {
     const response = await fetch(libraryEndpoint, {cache: 'no-store'});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -337,7 +351,6 @@ async function loadLibrary({silent = false} = {}) {
     elements.styleCount.textContent = library.stats.styleCount;
     elements.previewCount.textContent = library.stats.previewCount;
     renderCategoryCounts();
-    setSyncStatus('ready', text('synced'));
     if (changed) {
       render();
       showToast(text('updated'));
@@ -346,7 +359,6 @@ async function loadLibrary({silent = false} = {}) {
     }
   } catch (error) {
     console.error(error);
-    setSyncStatus('error', text('failed'));
     if (!state.hasLoaded) {
       elements.library.innerHTML = `
         <div class="load-error">
@@ -361,9 +373,11 @@ async function loadLibrary({silent = false} = {}) {
 function renderCategoryCounts() {
   if (!state.library) return;
   const counts = {all: state.library.cards.length};
+  const hasNew = {all: state.library.cards.some(isNewCard)};
   state.library.cards.forEach((card) => {
     (card.tags || [card.category]).forEach((tag) => {
       counts[tag] = (counts[tag] || 0) + 1;
+      if (isNewCard(card)) hasNew[tag] = true;
     });
   });
   elements.filters.querySelectorAll('[data-filter]').forEach((button) => {
@@ -375,6 +389,16 @@ function renderCategoryCounts() {
       button.append(badge);
     }
     badge.textContent = counts[key] ?? 0;
+    // NEW 徽标插在文字与计数之间（“all” 恒有新卡时也提示，与卡片徽标同窗口）
+    let newBadge = button.querySelector('.new-badge');
+    if (hasNew[key] && !newBadge) {
+      newBadge = document.createElement('span');
+      newBadge.className = 'new-badge';
+      newBadge.textContent = 'NEW';
+      button.insertBefore(newBadge, badge);
+    } else if (!hasNew[key] && newBadge) {
+      newBadge.remove();
+    }
   });
 }
 
@@ -400,10 +424,8 @@ elements.filters.addEventListener('click', (event) => {
   render();
 });
 
-elements.languageSwitch.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-language]');
-  if (!button || button.dataset.language === state.language) return;
-  state.language = button.dataset.language;
+elements.languageToggle.addEventListener('click', () => {
+  state.language = state.language === 'zh' ? 'en' : 'zh';
   try {
     localStorage.setItem('video-shot-gallery-language', state.language);
   } catch {}
@@ -411,10 +433,8 @@ elements.languageSwitch.addEventListener('click', (event) => {
   render();
 });
 
-elements.themeSwitch.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-theme]');
-  if (!button || button.dataset.theme === state.theme) return;
-  state.theme = button.dataset.theme;
+elements.themeToggle.addEventListener('click', () => {
+  state.theme = elements.themeToggle.dataset.next === 'dark' ? 'dark' : 'light';
   try {
     localStorage.setItem('video-shot-gallery-theme', state.theme);
   } catch {}
@@ -571,6 +591,11 @@ elements.clearFilters.addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && elements.followTrigger?.getAttribute('aria-expanded') === 'true') {
+    setFollowMenuOpen(false);
+    elements.followTrigger.focus();
+    return;
+  }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault();
     elements.searchInput.focus();

@@ -9,14 +9,13 @@
 <h1>video-shotcraft</h1>
 
 [![GitHub stars](https://img.shields.io/github/stars/Vincentwei1021/video-shotcraft)](https://github.com/Vincentwei1021/video-shotcraft/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/Vincentwei1021/video-shotcraft)](https://github.com/Vincentwei1021/video-shotcraft/network/members)
-[![Gallery](https://img.shields.io/badge/Gallery-live%20previews-d3923c)](https://vincentwei1021.github.io/video-shotcraft/)
 [![AtomGit Star](https://atomgit.com/VincentWei/video-shotcraft/star/badge.svg)](https://atomgit.com/VincentWei/video-shotcraft)
+[![Gallery](https://img.shields.io/badge/Gallery-live%20previews-d3923c)](https://vincentwei1021.github.io/video-shotcraft/)
 
 <a href="https://trendshift.io/repositories/88911?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-88911" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/88911/daily?language=TypeScript" alt="Vincentwei1021%2Fvideo-shotcraft | Trendshift" width="250" height="55"/></a>
 <a href="https://trendshift.io/repositories/88911?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-88911" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/88911/weekly?language=TypeScript" alt="Vincentwei1021%2Fvideo-shotcraft | Trendshift" width="250" height="55"/></a>
 
-**An agent skill for crafting cinematic product videos: 104 shot recipe cards · 161 styles · 161 motion previews · a production-ready template**
+**An agent skill for crafting cinematic product videos: 152 shot recipe cards · 209 styles · 209 motion previews · a production-ready template**
 
 [English](README.md) | [中文](README_CN.md) | [日本語](README_JA.md)
 
@@ -28,7 +27,38 @@ sound-designs a cinematic promo, marketing, launch, or demo video with
 [Remotion](https://www.remotion.dev/) — real page captures, 2.5D camera moves,
 beat-synced cuts, and film-grade SFX included.
 
-🖼️ [**Browse all 161 motion previews in the live Gallery »**](https://vincentwei1021.github.io/video-shotcraft/)
+🖼️ [**Browse all 209 motion previews in the live Gallery »**](https://vincentwei1021.github.io/video-shotcraft/)
+
+## ✨ What's new
+
+> [!IMPORTANT]
+> ### 🔥 2026-08 · New in the series: **video-talkcraft**, for narration videos
+> [**video-talkcraft**](https://github.com/Vincentwei1021/video-talkcraft) is the
+> narration-video installment of this series. Hand it a script plus a finished
+> voiceover and every motion beat locks to the voice: word-level timestamps
+> aligned locally (median 20–40 ms per character), **78 motion recipe cards**, a
+> 7-layer anti-slideshow shot system (continuous camera curves, parallax planes,
+> idle/yield lifecycle, breathing environment), plain-cut subtitles, and
+> triple-gate QA. Same recipe-card + Remotion workflow as here, retuned for
+> talking content.
+>
+> 🎙️ [**Project page »**](https://github.com/Vincentwei1021/video-talkcraft) ·
+> 🖼️ [**Browse all 78 narration motion previews »**](https://vincentwei1021.github.io/video-talkcraft/)
+
+- 🌟 **2026-08 · 48 new shot recipe cards** — the library grows from 104 to
+  **152 cards / 209 previews**. Distilled from 209 candidate motions through
+  eight rounds of frame-by-frame review against reference footage, then folded
+  into the regular Gallery categories with full recipe cards, native Remotion
+  components (`demos/<category>/<name>/<Component>.tsx`, deterministic and
+  driven by the normalized progress `t` — see demos/README.md for the wiring
+  snippet), and motion previews. All de-branded: neutral placeholder copy and a
+  single swappable `ACCENT` color variable.
+- 🎞️ **2026-08 · JianYing (CapCut CN) project export** — after final delivery
+  the film can be exported as an editable JianYing draft: the plate is cut per
+  shot (retime/reorder/grade), captions are rebuilt as native text tracks
+  (content/size/color editable), SFX/BGM land on separate audio tracks.
+  Verified on JianYing Pro 11.2 for macOS; see
+  [references/jianying-export.md](references/jianying-export.md).
 
 ## 🎬 Showcase
 
@@ -121,12 +151,13 @@ With these three flags, frame renders from the bundled template work.
 
 | Content | Description |
 | --- | --- |
-| 104 shot recipe cards | Purpose, energy, suggested duration, parameters, implementation notes, and known pitfalls |
-| 161 motion previews | Covering 161 styles; searchable and filterable in the online Gallery |
+| 152 shot recipe cards | Purpose, energy, suggested duration, parameters, implementation notes, and known pitfalls |
+| 209 motion previews | Covering 209 styles; searchable and filterable in the online Gallery |
 | Remotion implementations | Tuned TSX demos containing the actual easing and timing parameters for each card |
 | Complete video template | A validated 36.2-second, 1920×1080, 30fps product promo with 10 shots |
 | Components and assets | 2.5D page camera, captions, flash cuts, digit rolls, SFX, and capture scripts |
 | Production methodology | Capture, visual direction, storyboarding, sound design, beat sync, and final QA |
+| JianYing project export | Load the film into JianYing (CapCut CN) for further editing — per-shot speed, captions, and audio all editable (verified on macOS 11.2) |
 
 The toolkit primarily targets web and desktop product promos, while individual
 shot cards can also be used in feature demos, brand films, launch videos, and
@@ -139,14 +170,16 @@ video-shotcraft/
 ├── SKILL.md                 # Agent entry point and core production rules
 ├── references/
 │   ├── pipeline.md          # End-to-end production workflow
-│   ├── shots/               # 104 shot recipe cards in 10 functional categories
+│   ├── shots/               # 152 shot recipe cards in 10 functional categories
 │   ├── sequences/           # Reusable full-video structures and sequence patterns
 │   ├── aesthetic-rules.md   # Visual QA criteria
 │   ├── music-beat-sync.md   # BGM analysis and beat-sync methodology
-│   └── sound-design.md      # Sound-design guidance and examples
+│   ├── sound-design.md      # Sound-design guidance and examples
+│   └── jianying-export.md   # JianYing (CapCut CN) project-export guide
 ├── demos/                   # Remotion reference implementations (same categories)
 ├── gallery/                 # Static motion-preview Gallery
 ├── template/                # Runnable complete video template
+├── jianying-export/         # JianYing draft installers (mac tested / win untested)
 └── assets/
     ├── lib/                 # Reusable Remotion components
     ├── scripts/             # Page-asset capture scripts
@@ -173,14 +206,6 @@ Product screenshots bundled with the template are demonstration assets. Replace 
 screenshots from the target product before publishing, and verify whether any product,
 customer, or personal data needs to be anonymized.
 
-## 📝 Changelog
-
-| Date | Update |
-|---|---|
-| 2026-07-27 | Restructured the audio library into `bgm/` + `sfx/<category>/`, with SFX grouped into 16 scene/material categories; expanded the library to 149 SFX (added previously missing texture layers: paper/print, typewriter, handwriting, film projector, counters/gauges, ink/fluid, glass) ; deduplicated the library by md5 and recovered original license URLs for 7 files |
-| 2026-07-27 | Gallery cards support multi-category tags; flat, alphabetically sorted All view; recovered GridWaveFlip and WireframeDrawOn sources |
-| 2026-07-26 | Gallery auto-deploys to GitHub Pages; preview mp4s moved out of git to a release, slimming the repo |
-
 ## 🙏 Acknowledgements
 
 Many shot recipes in this library were distilled by studying the motion language
@@ -190,6 +215,8 @@ and Loom**. The cards document motion techniques (timing, easing, choreography)
 re-implemented from scratch; no footage, artwork, or brand assets from these
 films are included in this repository. All trademarks belong to their respective
 owners, and none of these companies are affiliated with or endorse this project.
+Per-batch sourcing notes for the 48 cards added in 2026-08 live in
+[references/shots/ATTRIBUTION.md](references/shots/ATTRIBUTION.md).
 
 Special thanks to:
 
@@ -203,6 +230,14 @@ Special thanks to:
   Vlambeer's screenshake talks, classic animation timing) inform several cards.
 - **Claude Code** — this library itself was built, iterated, and QA'd with an
   AI coding agent, using the same workflow the skill teaches.
+
+## Follow me
+
+<p>
+  <a href="https://x.com/VincentWei93"><img alt="Follow Vincent on X" src="https://img.shields.io/badge/X-Follow_Me-000000?style=for-the-badge&logo=x&logoColor=white"></a>
+  <a href="https://www.douyin.com/user/MS4wLjABAAAAK1pkjBxilk2Oi_9h_vFyD-lTAu9CTlvhmOtkosDvvxg"><img alt="Follow Vincent on Douyin" src="https://img.shields.io/badge/Douyin-Follow_Me-000000?style=for-the-badge&logo=tiktok&logoColor=white"></a>
+  <a href="https://xhslink.cn/m/At9iP2d5C1V"><img alt="Follow Vincent on Red Note" src="https://img.shields.io/badge/Red_Note-Follow_Me-FF2442?style=for-the-badge&logo=xiaohongshu&logoColor=white"></a>
+</p>
 
 ## ⭐ Star history
 

@@ -16,7 +16,7 @@
 <a href="https://trendshift.io/repositories/88911?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-88911" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/88911/daily?language=TypeScript" alt="Vincentwei1021%2Fvideo-shotcraft | Trendshift" width="250" height="55"/></a>
 <a href="https://trendshift.io/repositories/88911?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-88911" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/88911/weekly?language=TypeScript" alt="Vincentwei1021%2Fvideo-shotcraft | Trendshift" width="250" height="55"/></a>
 
-**让 agent 帮你制作电影感产品视频的 skill：104 张镜头配方卡 · 161 个样式 · 161 条动态样片 · 已验收成片模板**
+**让 agent 帮你制作电影感产品视频的 skill：152 张镜头配方卡 · 209 个样式 · 209 条动态样片 · 已验收成片模板**
 
 [English](README.md) | [中文](README_CN.md) | [日本語](README_JA.md)
 
@@ -27,7 +27,30 @@
 和声音设计，产出一支电影感的宣传片 / 营销视频 / 发布视频 / 功能演示——
 真实页面截图、2.5D 运镜、节奏卡点和电影级 SFX 全部包含。
 
-🖼️ [**在线 Gallery：浏览全部 161 条动态样片 »**](https://vincentwei1021.github.io/video-shotcraft/)
+🖼️ [**在线 Gallery：浏览全部 209 条动态样片 »**](https://vincentwei1021.github.io/video-shotcraft/)
+
+## ✨ 最近更新
+
+> [!IMPORTANT]
+> ### 🔥 2026-08 · 系列新成员：口播版 **video-talkcraft**
+> [**video-talkcraft**](https://github.com/Vincentwei1021/video-talkcraft)
+> 是本系列的口播视频版：给它一份口播稿 + 一条成品配音，所有动效节拍都钉在
+> 人声上——本地对齐字级时间戳（逐字中位误差 20–40 ms）、**78 张动效配方卡**、
+> 七层反 PPT 镜头系统（连续相机曲线、视差层、idle/yield 生命周期、呼吸环境层）、
+> 硬切字幕、三道 QA 闸门。同一套配方卡 + Remotion 工作流，按口播内容重新调校。
+>
+> 🎙️ [**项目主页 »**](https://github.com/Vincentwei1021/video-talkcraft) ·
+> 🖼️ [**在线浏览 78 条口播动效样片 »**](https://vincentwei1021.github.io/video-talkcraft/)
+
+- 🌟 **2026-08 · 新增 48 张镜头配方卡**——卡库从 104 张扩充到
+  **152 卡 / 209 条样片**。由 209 个候选动效经八轮与参考片逐帧比对评审收敛
+  而来，按既有类别并入 Gallery：完整配方卡 + 原生 Remotion 组件
+  （`demos/<类别>/<卡名>/<组件>.tsx`，归一化进度 t 驱动、逐帧确定性）+
+  动态样片。全部模板化：中性占位文案 + 单一可替换 `ACCENT` 强调色变量。
+- 🎞️ **2026-08 · 剪映工程导出**——成片交付后可导出为剪映工程草稿：底片按
+  镜头切段（可变速/重排/调色），字幕重建为原生文本轨（文字/字号/颜色可
+  编辑），SFX/BGM 独立音轨。Mac 剪映 11.2 实测验收，方法见
+  [references/jianying-export.md](references/jianying-export.md)。
 
 ## 🎬 效果预览
 
@@ -117,12 +140,13 @@ agent 会替换成目标产品的截图、文案和品牌信息，复现同等�
 
 | 内容 | 说明 |
 | --- | --- |
-| 104 张镜头配方卡 | 记录用途、能量、建议时长、参数、实现要点与已知坑 |
-| 161 条动态样片 | 覆盖 161 个样式，可在在线 Gallery 中直接预览、搜索和筛选 |
+| 152 张镜头配方卡 | 记录用途、能量、建议时长、参数、实现要点与已知坑 |
+| 209 条动态样片 | 覆盖 209 个样式，可在在线 Gallery 中直接预览、搜索和筛选 |
 | Remotion 参考实现 | 每张卡对应经过调校的 TSX demo，包含实际缓动和时序参数 |
 | 完整成片模板 | 36.2 秒、1920×1080、30fps、10 镜头的纸墨琥珀风产品宣传片 |
 | 组件与素材 | 2.5D 页面相机、字幕、闪切、数字滚动、音效和素材采集脚本 |
 | 制作方法论 | 从素材采集、风格定调和分镜，到声音设计、节奏卡点与最终验收 |
+| 剪映工程导出 | 成片可装进剪映继续编辑：镜头变速/字幕/音轨全开放（Mac 11.2 实测） |
 
 当前主要面向 Web 与桌面产品宣传片，但镜头卡也可以单独用于功能演示、
 品牌短片、发布视频或其他动态设计项目。
@@ -134,14 +158,16 @@ video-shotcraft/
 ├── SKILL.md                 # Agent 使用入口与核心制作规则
 ├── references/
 │   ├── pipeline.md          # 完整制作流水线
-│   ├── shots/               # 104 张镜头配方卡
+│   ├── shots/               # 152 张镜头配方卡
 │   ├── sequences/           # 可复用的全片结构与桥段模板
 │   ├── aesthetic-rules.md   # 视觉验收准则
 │   ├── music-beat-sync.md   # BGM 节奏分析与卡点方法
-│   └── sound-design.md      # 声音设计方法与判例
+│   ├── sound-design.md      # 声音设计方法与判例
+│   └── jianying-export.md   # 剪映工程导出方法
 ├── demos/                   # 镜头卡的 Remotion 参考实现（同类别目录）
 ├── gallery/                 # 在线样片画廊的静态站点
 ├── template/                # 可直接运行的完整成片模板
+├── jianying-export/         # 剪映草稿安装模块（Mac 实测 / Windows 未验证）
 └── assets/
     ├── lib/                 # 可复制使用的 Remotion 组件
     ├── scripts/             # 页面素材采集脚本
@@ -167,14 +193,6 @@ video-shotcraft/
 模板内的产品截图为演示素材。对外发布成片前，请替换为目标产品自己的截图，
 并确认其中的数据、客户信息和个人信息是否需要脱敏。
 
-## 📝 更新记录
-
-| 日期 | 更新 |
-|---|---|
-| 2026-07-27 | 音频库重构为 `bgm/` + `sfx/<类别>/` 两层，音效按场景/材质分 16 类；扩充音效库至 149 个（新增纸张/印刷、打字机、书写、放映机胶片、计数器仪表、墨水流体、玻璃碎裂等此前缺失的质感层）；md5 全库去重，补回 7 个音效的原始授权 URL |
-| 2026-07-27 | 画廊卡片支持多类别标签；All 视图改为平铺、按字母排序；补回 GridWaveFlip 与 WireframeDrawOn 源码 |
-| 2026-07-26 | 画廊自动部署到 GitHub Pages；样片 mp4 移出 git 改存 release，仓库瘦身 |
-
 ## 🙏 致谢
 
 本库中许多镜头配方源自对优秀官方产品宣传片动效语言的研究学习——包括
@@ -182,7 +200,8 @@ video-shotcraft/
 Pitch、Miro、Superhuman、Loom** 等产品的宣传片。镜头卡记录的是从零重新
 实现的动效技法（时序、缓动、编排）；仓库中不包含上述影片的任何素材、
 画面或品牌资产。所有商标归各自所有者所有，上述公司与本项目无关联、
-亦未对本项目背书。
+亦未对本项目背书。2026-08 新增 48 张卡的逐批次来源说明见
+[references/shots/ATTRIBUTION.md](references/shots/ATTRIBUTION.md)。
 
 特别感谢：
 
@@ -196,6 +215,14 @@ Pitch、Miro、Superhuman、Loom** 等产品的宣传片。镜头卡记录的是
   经典动画时序原则），多张镜头卡受其启发。
 - **Claude Code** —— 本库自身的构建、迭代与验收全程由 AI coding agent
   完成，用的正是这个 skill 所传授的工作流。
+
+## 关注我
+
+<p>
+  <a href="https://x.com/VincentWei93"><img alt="在 X 关注 Vincent" src="https://img.shields.io/badge/X-Follow_Me-000000?style=for-the-badge&logo=x&logoColor=white"></a>
+  <a href="https://www.douyin.com/user/MS4wLjABAAAAK1pkjBxilk2Oi_9h_vFyD-lTAu9CTlvhmOtkosDvvxg"><img alt="在抖音关注 Vincent" src="https://img.shields.io/badge/Douyin-Follow_Me-000000?style=for-the-badge&logo=tiktok&logoColor=white"></a>
+  <a href="https://xhslink.cn/m/At9iP2d5C1V"><img alt="在小红书关注 Vincent" src="https://img.shields.io/badge/Red_Note-Follow_Me-FF2442?style=for-the-badge&logo=xiaohongshu&logoColor=white"></a>
+</p>
 
 ## ⭐ Star 历史
 

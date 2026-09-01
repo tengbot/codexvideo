@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/Vincentwei1021/video-shotcraft",
-  "commit": "0022ec45d28800cecb5b16624a3179093c93f4e9",
-  "imported_at": "2026-08-07T18:00:00+08:00",
+  "commit": "00371a361f8242ee5d35db19a7530fb9fbcacc0e",
+  "imported_at": "2026-09-01T00:00:00+08:00",
   "license": "Apache-2.0",
   "integration": "Project-local complete source mirror. OpenMontage adaptations live outside this directory."
 }
