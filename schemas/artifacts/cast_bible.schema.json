@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/cast_bible",
+  "title": "Cast Bible",
+  "description": "Stable identity, conversational role, voice, and framing rules for synthetic hosts.",
+  "type": "object",
+  "required": ["version", "format", "studio", "hosts"],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "format": {"type": "string", "const": "ai_dialogue_podcast"},
+    "studio": {
+      "type": "object",
+      "required": ["description", "palette", "continuity_rules"],
+      "properties": {
+        "description": {"type": "string", "minLength": 1},
+        "palette": {"type": "array", "minItems": 2, "items": {"type": "string", "minLength": 1}},
+        "continuity_rules": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "hosts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "role", "personality", "voice", "avatar", "framing"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "role": {"type": "string", "minLength": 1},
+          "personality": {"type": "array", "minItems": 2, "items": {"type": "string", "minLength": 1}},
+          "voice": {"type": "object", "required": ["provider", "voice_id", "direction"], "properties": {"provider": {"type": "string", "minLength": 1}, "voice_id": {"type": "string", "minLength": 1}, "direction": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+          "avatar": {"type": "object", "required": ["provider", "avatar_id", "reference_path"], "properties": {"provider": {"type": "string", "minLength": 1}, "avatar_id": {"type": "string", "minLength": 1}, "reference_path": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+          "framing": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

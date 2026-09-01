@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/creative_brief",
+  "title": "Promotion Creative Brief",
+  "description": "Locks one audience, pain, promise, proof strategy, format, and CTA before production.",
+  "type": "object",
+  "required": ["version", "creative_id", "product_id", "audience", "pain_id", "value_mapping_id", "hook_id", "message", "format", "language", "destination", "aspect", "duration_seconds", "structure", "approval"],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "creative_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "product_id": {"type": "string", "minLength": 1},
+    "audience": {"type": "string", "minLength": 1},
+    "pain_id": {"type": "string", "minLength": 1},
+    "value_mapping_id": {"type": "string", "minLength": 1},
+    "hook_id": {"type": "string", "minLength": 1},
+    "message": {"type": "string", "minLength": 1},
+    "format": {"type": "string", "enum": ["faceless_narrative", "screen_demo", "motion_graphics", "avatar_spokesperson", "ai_dialogue_podcast", "hybrid"]},
+    "language": {"type": "string", "minLength": 2},
+    "destination": {"type": "string", "enum": ["tiktok", "instagram_reels", "youtube_shorts", "x", "linkedin", "youtube", "embed", "other"]},
+    "aspect": {"type": "string", "enum": ["9:16", "1:1", "16:9"]},
+    "duration_seconds": {"type": "number", "minimum": 6, "maximum": 90},
+    "structure": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["beat", "start_seconds", "end_seconds", "purpose"],
+        "properties": {
+          "beat": {"type": "string", "enum": ["hook", "pain", "solution", "proof", "offer", "cta"]},
+          "start_seconds": {"type": "number", "minimum": 0},
+          "end_seconds": {"type": "number", "exclusiveMinimum": 0},
+          "purpose": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "creative_hypothesis": {"type": "string"},
+    "approval": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {"type": "string", "enum": ["pending", "approved", "approved_with_changes", "rejected"]},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

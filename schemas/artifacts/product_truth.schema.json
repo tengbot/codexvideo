@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/product_truth",
+  "title": "Product Truth",
+  "description": "Verified product claims, constraints, and evidence captured before promotional copy is written.",
+  "type": "object",
+  "required": ["version", "product_id", "product_name", "canonical_url", "captured_at", "audience", "claims", "sources"],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "product_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "product_name": {"type": "string", "minLength": 1},
+    "canonical_url": {"type": "string", "format": "uri"},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "audience": {"type": "string", "minLength": 1},
+    "positioning": {"type": "string"},
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "statement", "consumer_value", "status", "evidence_refs"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+          "kind": {"type": "string", "enum": ["feature", "benefit", "offer", "constraint", "differentiator"]},
+          "statement": {"type": "string", "minLength": 1},
+          "consumer_value": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "enum": ["verified", "qualified", "unverified"]},
+          "limitations": {"type": "array", "items": {"type": "string"}},
+          "evidence_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "url", "title", "kind", "captured_at"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "url": {"type": "string", "format": "uri"},
+          "title": {"type": "string", "minLength": 1},
+          "kind": {"type": "string", "enum": ["product_page", "documentation", "pricing", "demo", "first_party_asset", "third_party"]},
+          "captured_at": {"type": "string", "format": "date-time"},
+          "local_path": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

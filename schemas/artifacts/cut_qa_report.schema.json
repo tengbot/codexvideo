@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/cut_qa_report",
+  "title": "Cut QA Report",
+  "description": "Deterministic decode, audio, silence, black-frame, and boundary review evidence.",
+  "type": "object",
+  "required": ["version", "output_path", "status", "technical", "audio", "boundaries", "artifacts", "issues"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "output_path": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["pass", "revise", "fail"] },
+    "technical": {
+      "type": "object",
+      "required": ["decode_ok", "duration_seconds", "width", "height", "fps", "codec", "pixel_format", "has_audio", "size_bytes"],
+      "properties": {
+        "decode_ok": { "type": "boolean" },
+        "duration_seconds": { "type": "number", "minimum": 0 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "fps": { "type": "number", "minimum": 0 },
+        "codec": { "type": "string" },
+        "pixel_format": { "type": "string" },
+        "has_audio": { "type": "boolean" },
+        "size_bytes": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "audio": {
+      "type": "object",
+      "required": ["max_volume_db", "clipping_detected", "unexpected_silence", "silence_intervals"],
+      "properties": {
+        "max_volume_db": { "type": ["number", "null"] },
+        "clipping_detected": { "type": "boolean" },
+        "unexpected_silence": { "type": "boolean" },
+        "silence_intervals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["start_seconds", "end_seconds"],
+            "properties": {
+              "start_seconds": { "type": "number", "minimum": 0 },
+              "end_seconds": { "type": "number", "minimum": 0 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "time_seconds", "timeline_view_path", "black_frame_detected", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "time_seconds": { "type": "number", "minimum": 0 },
+          "timeline_view_path": { "type": "string" },
+          "black_frame_detected": { "type": "boolean" },
+          "status": { "type": "string", "enum": ["pass", "review"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["overview", "master_subtitles"],
+      "properties": {
+        "overview": { "type": "string" },
+        "master_subtitles": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "issues": { "type": "array", "items": { "type": "string" } },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

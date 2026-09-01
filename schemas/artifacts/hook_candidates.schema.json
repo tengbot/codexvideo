@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/hook_candidates",
+  "title": "Hook Candidates",
+  "description": "Need-driven hook options scored before a faceless or dialogue script is approved.",
+  "type": "object",
+  "required": ["version", "topic", "audience", "candidates", "approval"],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "topic": {"type": "string", "minLength": 1},
+    "audience": {"type": "string", "minLength": 1},
+    "candidates": {
+      "type": "array",
+      "minItems": 3,
+      "items": {"$ref": "#/$defs/candidate"}
+    },
+    "selected_id": {"type": ["string", "null"]},
+    "selected_ids": {
+      "type": "array",
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "approval": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {"type": "string", "enum": ["pending", "approved", "approved_with_changes", "rejected"]},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "required": ["id", "text", "human_need", "promise", "format_fits", "scores", "evidence_refs"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "text": {"type": "string", "minLength": 1},
+        "pain_id": {"type": "string", "minLength": 1},
+        "human_need": {"type": "string", "minLength": 1},
+        "promise": {"type": "string", "minLength": 1},
+        "hook_type": {
+          "type": "string",
+          "enum": ["direct_pain", "failed_alternative", "risk_loss", "before_after", "proof_led", "objection_dialogue", "desire_led", "contrarian"]
+        },
+        "spoken_duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "first_frame": {"type": "string", "minLength": 1},
+        "three_second_gate": {
+          "type": "object",
+          "required": ["passes", "pain_is_explicit", "brand_first", "visual_sync"],
+          "properties": {
+            "passes": {"type": "boolean"},
+            "pain_is_explicit": {"type": "boolean"},
+            "brand_first": {"type": "boolean"},
+            "visual_sync": {"type": "boolean"},
+            "notes": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        "format_fits": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "enum": ["faceless_narrative", "screen_demo", "motion_graphics", "avatar_spokesperson", "ai_dialogue_podcast", "hybrid"]}
+        },
+        "scores": {
+          "type": "object",
+          "required": ["truth", "retention", "relevance", "total"],
+          "properties": {
+            "truth": {"type": "number", "minimum": 0, "maximum": 5},
+            "retention": {"type": "number", "minimum": 0, "maximum": 5},
+            "relevance": {"type": "number", "minimum": 0, "maximum": 5},
+            "total": {"type": "number", "minimum": 0, "maximum": 15}
+          },
+          "additionalProperties": false
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

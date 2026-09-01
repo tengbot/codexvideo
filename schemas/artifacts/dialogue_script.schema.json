@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/dialogue_script",
+  "title": "Dialogue Script",
+  "description": "Audio-first speaker-turn contract for a synthetic two-host conversation.",
+  "type": "object",
+  "required": ["version", "title", "language", "duration_target_seconds", "hook", "host_ids", "turns", "cta"],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "title": {"type": "string", "minLength": 1},
+    "language": {"type": "string", "minLength": 2},
+    "duration_target_seconds": {"type": "number", "minimum": 10},
+    "hook": {"type": "string", "minLength": 1},
+    "host_ids": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "turns": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["id", "speaker_id", "line", "intent", "emotion", "duration_seconds", "shot"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "speaker_id": {"type": "string", "minLength": 1},
+          "line": {"type": "string", "minLength": 1},
+          "intent": {"type": "string", "enum": ["hook", "question", "challenge", "answer", "example", "reveal", "agreement", "cta"]},
+          "emotion": {"type": "string", "minLength": 1},
+          "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+          "shot": {"type": "string", "enum": ["two_shot", "host_a_closeup", "host_b_closeup", "reaction", "broll_insert", "evidence_card"]},
+          "visual_insert": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "cta": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

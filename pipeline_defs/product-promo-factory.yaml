@@ -1,0 +1,199 @@
+name: product-promo-factory
+version: "1.0"
+description: >
+  Evidence-led product promotion pipeline. It starts from verified product truth,
+  ranks 20-50 consumer pains, maps one pain to one value proposition, gates the
+  opening three seconds, requires visual proof, and produces controlled variants.
+category: hybrid
+stability: beta
+default_checkpoint_policy: guided
+
+orchestration:
+  mode: executive-producer
+  skill: pipelines/product-promo-factory/executive-producer
+  budget_default_usd: 5.00
+  max_revisions_per_stage: 3
+  max_send_backs: 3
+  max_wall_time_minutes: 60
+
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: true
+
+required_skills:
+  - core/content-formats
+  - pipelines/product-promo-factory/executive-producer
+  - pipelines/product-promo-factory/product-truth-director
+  - pipelines/product-promo-factory/pain-research-director
+  - pipelines/product-promo-factory/value-director
+  - pipelines/product-promo-factory/hook-director
+  - pipelines/product-promo-factory/creative-director
+  - pipelines/product-promo-factory/proposal-director
+  - pipelines/product-promo-factory/script-director
+  - pipelines/product-promo-factory/proof-director
+  - pipelines/product-promo-factory/shotcraft-director
+  - pipelines/product-promo-factory/asset-director
+  - pipelines/product-promo-factory/edit-director
+  - pipelines/product-promo-factory/compose-director
+  - pipelines/product-promo-factory/publish-director
+  - meta/reviewer
+  - meta/checkpoint-protocol
+
+compatible_playbooks:
+  recommended: [clean-professional, flat-motion-graphics]
+  also_works: [minimalist-diagram]
+  custom_allowed: true
+
+stages:
+  - name: product_truth
+    skill: pipelines/product-promo-factory/product-truth-director
+    produces: [product_truth]
+    tools_available: [screen_capture_selector]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Every promotional claim is verified, qualified, or explicitly rejected
+      - Product limitations are preserved beside the claims they constrain
+
+  - name: pain_research
+    skill: pipelines/product-promo-factory/pain-research-director
+    required_artifacts_in: [product_truth]
+    produces: [pain_library]
+    tools_available: [promo_strategy]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Pain library contains 20-50 evidence-linked consumer pains
+      - Top five pains are ranked by demand, urgency, severity, intent, and confidence
+
+  - name: value_mapping
+    skill: pipelines/product-promo-factory/value-director
+    required_artifacts_in: [product_truth, pain_library]
+    produces: [value_map]
+    tools_available: [promo_strategy]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Every promise maps to verified product claims and concrete proof
+      - Each candidate creative addresses one pain only
+
+  - name: hook_lab
+    skill: pipelines/product-promo-factory/hook-director
+    required_artifacts_in: [pain_library, value_map]
+    optional_artifacts_in: [product_truth]
+    produces: [hook_candidates]
+    tools_available: [promo_strategy, tts_selector]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - At least five hooks are produced for each selected pain
+      - Selected hooks state the pain and pass the measured three-second gate
+
+  - name: creative_brief
+    skill: pipelines/product-promo-factory/creative-director
+    required_artifacts_in: [product_truth, pain_library, value_map, hook_candidates]
+    produces: [creative_brief]
+    tools_available: [promo_strategy]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - One audience, pain, promise, proof strategy, format, and CTA are locked
+      - Hook starts at zero, ends by three seconds, and CTA is the final beat
+
+  - name: proposal
+    skill: pipelines/product-promo-factory/proposal-director
+    required_artifacts_in: [product_truth, pain_library, value_map, hook_candidates, creative_brief]
+    produces: [proposal_packet, decision_log]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Remotion and HyperFrames are both presented when available, with project-specific tradeoffs
+      - Runtime, composition mode, providers, sample plan, and cost ceiling are explicitly approved and logged
+
+  - name: script
+    skill: pipelines/product-promo-factory/script-director
+    required_artifacts_in: [creative_brief, proposal_packet, decision_log, hook_candidates, value_map]
+    optional_artifacts_in: [product_truth, pain_library]
+    produces: [script]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Script follows pain, solution, proof, and CTA without a feature-list detour
+      - Every factual statement references product truth
+
+  - name: proof_plan
+    skill: pipelines/product-promo-factory/proof-director
+    required_artifacts_in: [creative_brief, script, product_truth]
+    produces: [proof_plan, scene_plan]
+    tools_available: [promo_strategy]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Every selected claim has a visible proof scene
+      - Product captures and result comparisons are not replaced by generic stock footage
+
+  - name: shotcraft_plan
+    skill: pipelines/product-promo-factory/shotcraft-director
+    required_artifacts_in: [creative_brief, script, proof_plan]
+    produces: [shot_language_plan]
+    required_tools: [shotcraft_catalog]
+    tools_available: [shotcraft_catalog]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Every scene resolves to an existing recipe, style, and exact demo implementation
+      - Native-aspect camera paths, asset requirements, SFX cues, and acceptance frames are explicit
+      - Product proof remains legible and is not replaced by decorative motion
+
+  - name: assets
+    skill: pipelines/product-promo-factory/asset-director
+    required_artifacts_in: [proof_plan, scene_plan, script, shot_language_plan]
+    produces: [asset_manifest, visual_match, audio_timeline]
+    required_tools: [tts_selector]
+    optional_tools: [direct_clip_search, image_selector, video_selector, subtitle_gen]
+    tools_available: [tts_selector, direct_clip_search, image_selector, video_selector, subtitle_gen]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Every selected asset is provenance tracked and satisfies its proof requirement
+      - Narration, word timings, captions, and first-frame assets exist
+
+  - name: edit
+    skill: pipelines/product-promo-factory/edit-director
+    required_artifacts_in: [creative_brief, proposal_packet, decision_log, scene_plan, asset_manifest, visual_match, audio_timeline]
+    produces: [edit_decisions, editable_timeline, campaign_plan]
+    tools_available: [editable_timeline, campaign_batch]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Timeline preserves the approved hook, solution, proof, and CTA timing
+      - Campaign variants change only the dimensions declared by the experiment
+
+  - name: compose
+    skill: pipelines/product-promo-factory/compose-director
+    required_artifacts_in: [edit_decisions, asset_manifest, creative_brief, proposal_packet, decision_log]
+    optional_artifacts_in: [editable_timeline, campaign_plan, shot_language_plan]
+    produces: [render_report, final_review, batch_run]
+    required_tools: [video_compose, audio_mixer]
+    optional_tools: [hyperframes_compose, campaign_batch, visual_qa]
+    tools_available: [video_compose, hyperframes_compose, audio_mixer, campaign_batch, visual_qa]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Final video decodes cleanly with safe-zone captions and synced audio
+      - First frame, three-second hook, product proof, and CTA pass visual review
+
+  - name: publish
+    skill: pipelines/product-promo-factory/publish-director
+    required_artifacts_in: [render_report, final_review]
+    optional_artifacts_in: [product_truth, pain_library, value_map, hook_candidates, creative_brief, proof_plan, campaign_plan, batch_run]
+    produces: [publish_log]
+    tools_available: [export_bundle]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Export bundle contains the video, strategy artifacts, sources, captions, and QA

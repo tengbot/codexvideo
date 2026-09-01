@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/source_transcript",
+  "title": "Source Transcript",
+  "description": "Provider-neutral word timeline for local raw-footage editing.",
+  "type": "object",
+  "required": ["version", "source_id", "source_path", "language", "duration_seconds", "timing_quality", "words"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "source_id": { "type": "string", "minLength": 1 },
+    "source_path": { "type": "string", "minLength": 1 },
+    "language": { "type": "string", "minLength": 1 },
+    "duration_seconds": { "type": "number", "minimum": 0 },
+    "timing_quality": {
+      "type": "string",
+      "enum": ["word_exact", "cue_interpolated", "manual"]
+    },
+    "words": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "start_seconds", "end_seconds", "speaker_id", "type"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "text": { "type": "string" },
+          "start_seconds": { "type": "number", "minimum": 0 },
+          "end_seconds": { "type": "number", "minimum": 0 },
+          "speaker_id": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "enum": ["word", "audio_event"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/audio_timeline",
+  "title": "Audio Timeline",
+  "description": "Canonical timing truth for narration, speaker turns, captions, music, and avatar shots.",
+  "type": "object",
+  "required": ["version", "duration_seconds", "segments"],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "start_seconds", "end_seconds", "source_path", "transcript"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "kind": {"type": "string", "enum": ["narration", "host_turn", "music", "sfx", "silence"]},
+          "speaker_id": {"type": ["string", "null"]},
+          "start_seconds": {"type": "number", "minimum": 0},
+          "end_seconds": {"type": "number", "exclusiveMinimum": 0},
+          "source_path": {"type": "string"},
+          "transcript": {"type": "string"},
+          "word_timings_path": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

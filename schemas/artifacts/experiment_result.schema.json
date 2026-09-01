@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/experiment_result",
+  "title": "Creative Experiment Result",
+  "description": "Platform performance and a deterministic diagnosis for the next creative iteration.",
+  "type": "object",
+  "required": ["version", "experiment_id", "creative_id", "platform", "measured_at", "metrics", "diagnosis", "next_action"],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "experiment_id": {"type": "string", "minLength": 1},
+    "creative_id": {"type": "string", "minLength": 1},
+    "platform": {"type": "string", "minLength": 1},
+    "measured_at": {"type": "string", "format": "date-time"},
+    "metrics": {
+      "type": "object",
+      "required": ["impressions", "three_second_views", "outbound_clicks", "conversions", "spend"],
+      "properties": {
+        "impressions": {"type": "integer", "minimum": 0},
+        "three_second_views": {"type": "integer", "minimum": 0},
+        "outbound_clicks": {"type": "integer", "minimum": 0},
+        "conversions": {"type": "integer", "minimum": 0},
+        "spend": {"type": "number", "minimum": 0},
+        "currency": {"type": "string", "default": "USD"},
+        "hold_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "outbound_ctr": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "conversion_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+      },
+      "additionalProperties": false
+    },
+    "diagnosis": {"type": "string", "enum": ["insufficient_data", "hook_problem", "message_or_proof_problem", "offer_or_landing_problem", "creative_candidate"]},
+    "next_action": {"type": "string", "minLength": 1},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

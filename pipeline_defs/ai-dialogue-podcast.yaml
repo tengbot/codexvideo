@@ -1,0 +1,140 @@
+name: ai-dialogue-podcast
+version: "1.0"
+description: >
+  Research-led two-host synthetic video podcast with role-driven English dialogue,
+  stable cast and studio continuity, audio-first avatar generation, evidence inserts,
+  captions, and local final composition.
+category: custom
+stability: beta
+default_checkpoint_policy: guided
+
+orchestration:
+  mode: executive-producer
+  skill: pipelines/ai-dialogue-podcast/executive-producer
+  budget_default_usd: 6.00
+  max_revisions_per_stage: 3
+  max_send_backs: 3
+  max_wall_time_minutes: 45
+
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
+required_skills:
+  - core/content-formats
+  - core/raw-footage-editing
+  - pipelines/ai-dialogue-podcast/executive-producer
+  - pipelines/ai-dialogue-podcast/research-director
+  - pipelines/ai-dialogue-podcast/proposal-director
+  - pipelines/ai-dialogue-podcast/script-director
+  - pipelines/ai-dialogue-podcast/scene-director
+  - pipelines/ai-dialogue-podcast/asset-director
+  - pipelines/ai-dialogue-podcast/edit-director
+  - pipelines/ai-dialogue-podcast/compose-director
+  - pipelines/ai-dialogue-podcast/publish-director
+  - meta/reviewer
+  - meta/checkpoint-protocol
+
+compatible_playbooks:
+  recommended: [clean-professional]
+  also_works: [flat-motion-graphics]
+  custom_allowed: true
+
+stages:
+  - name: research
+    skill: pipelines/ai-dialogue-podcast/research-director
+    produces: [research_brief]
+    tools_available: []
+    checkpoint_required: false
+    human_approval_default: false
+    success_criteria:
+      - Research identifies a real disagreement, misconception, or question
+      - Claims are source-grounded and safe to speak conversationally
+
+  - name: proposal
+    skill: pipelines/ai-dialogue-podcast/proposal-director
+    required_artifacts_in: [research_brief]
+    produces: [proposal_packet, hook_candidates, cast_bible, decision_log]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Hook, host roles, voices, avatar path, studio, and runtime are approved
+      - Cast roles create useful tension without fake controversy
+
+  - name: script
+    skill: pipelines/ai-dialogue-podcast/script-director
+    required_artifacts_in: [proposal_packet, hook_candidates, cast_bible]
+    optional_artifacts_in: [research_brief]
+    produces: [script, dialogue_script]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Dialogue alternates naturally with short, performable turns
+      - Every spoken claim is supported by research
+
+  - name: scene_plan
+    skill: pipelines/ai-dialogue-podcast/scene-director
+    required_artifacts_in: [script, dialogue_script, cast_bible]
+    optional_artifacts_in: [proposal_packet]
+    produces: [scene_plan]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Every turn maps to a speaker shot or evidence insert
+      - Eyeline, studio, wardrobe, framing, and caption safety are explicit
+
+  - name: assets
+    skill: pipelines/ai-dialogue-podcast/asset-director
+    required_artifacts_in: [scene_plan, dialogue_script, cast_bible]
+    produces: [asset_manifest, visual_match, audio_timeline]
+    required_tools: [tts_selector, video_selector]
+    optional_tools: [talking_head, lip_sync, image_selector, subtitle_gen, audio_enhance]
+    tools_available: [tts_selector, video_selector, talking_head, lip_sync, image_selector, subtitle_gen, audio_enhance]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Each host turn has measured audio and a matching avatar shot
+      - Identity, lip sync, studio continuity, and evidence inserts pass review
+
+  - name: edit
+    skill: pipelines/ai-dialogue-podcast/edit-director
+    required_artifacts_in: [scene_plan, asset_manifest, visual_match, audio_timeline]
+    optional_artifacts_in: [dialogue_script, cast_bible, source_transcript]
+    produces: [edit_decisions, editable_timeline]
+    optional_tools: [raw_transcript, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
+    tools_available: [editable_timeline, raw_transcript, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Cuts follow speaker timing and use reactions without false lip movement
+      - Evidence inserts support rather than interrupt the conversation
+
+  - name: compose
+    skill: pipelines/ai-dialogue-podcast/compose-director
+    required_artifacts_in: [edit_decisions, asset_manifest]
+    optional_artifacts_in: [dialogue_script, cast_bible, editable_timeline, source_transcript]
+    produces: [render_report, final_review]
+    required_tools: [video_compose, audio_mixer]
+    optional_tools: [video_stitch, audio_enhance, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
+    tools_available: [video_compose, hyperframes_compose, audio_mixer, video_stitch, audio_enhance, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Final video decodes cleanly and preserves the approved runtime
+      - Lip sync, speaker identity, audio, captions, and visual continuity pass
+      - Raw-footage routes include a cut_qa_report and every-boundary timeline views
+
+  - name: publish
+    skill: pipelines/ai-dialogue-podcast/publish-director
+    required_artifacts_in: [render_report, final_review]
+    produces: [publish_log]
+    tools_available: [export_bundle]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Local export bundle contains video, dialogue, cast, captions, sources, and QA

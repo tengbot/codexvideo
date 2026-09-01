@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/editable_timeline",
+  "title": "Editable Timeline",
+  "description": "Renderer-neutral, round-trip-safe edit project shared by agents, people, and editor adapters.",
+  "type": "object",
+  "required": ["version", "project", "settings", "tracks", "operations", "interchange"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "project": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "settings": {
+      "type": "object",
+      "required": ["width", "height", "fps", "frame_rate", "timebase_ticks_per_second", "background_color"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1},
+        "fps": {"type": "number", "exclusiveMinimum": 0},
+        "frame_rate": {
+          "type": "object",
+          "required": ["numerator", "denominator"],
+          "properties": {
+            "numerator": {"type": "integer", "minimum": 1},
+            "denominator": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": false
+        },
+        "timebase_ticks_per_second": {"type": "integer", "const": 120000},
+        "background_color": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "tracks": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/track"}
+    },
+    "operations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/operation"}
+    },
+    "interchange": {
+      "type": "object",
+      "required": ["format", "render_runtime", "source_artifacts", "adapters"],
+      "properties": {
+        "format": {"type": "string", "const": "openmontage-editable-timeline"},
+        "render_runtime": {"type": "string", "enum": ["remotion", "hyperframes", "ffmpeg"]},
+        "renderer_family": {"type": "string"},
+        "composition_mode": {"type": "string", "enum": ["templated", "atelier"]},
+        "source_artifacts": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "adapters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["status"],
+            "properties": {
+              "status": {"type": "string"},
+              "notes": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "track": {
+      "type": "object",
+      "required": ["id", "name", "type", "role", "lane", "order", "muted", "locked", "elements"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name": {"type": "string"},
+        "type": {"type": "string", "enum": ["video", "audio", "text", "graphic", "effect"]},
+        "role": {
+          "type": "string",
+          "enum": ["background", "primary", "overlay", "narration", "music", "sfx", "captions", "custom"]
+        },
+        "lane": {"type": "string", "enum": ["main", "overlay", "audio"]},
+        "order": {"type": "integer", "minimum": 0},
+        "muted": {"type": "boolean"},
+        "locked": {"type": "boolean"},
+        "elements": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/element"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "element": {
+      "type": "object",
+      "required": ["id", "name", "kind", "timeline"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name": {"type": "string"},
+        "kind": {
+          "type": "string",
+          "enum": ["video", "image", "audio", "text", "graphic", "effect", "composition", "subtitle"]
+        },
+        "source": {"$ref": "#/$defs/source"},
+        "timeline": {"$ref": "#/$defs/timing"},
+        "transform": {"$ref": "#/$defs/transform"},
+        "audio": {"$ref": "#/$defs/audio"},
+        "mask": {"$ref": "#/$defs/mask"},
+        "text": {"$ref": "#/$defs/text"},
+        "keyframes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/keyframe_channel"}
+        },
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "regeneration": {"$ref": "#/$defs/regeneration"},
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "asset_id": {"type": "string"},
+        "path": {"type": "string"},
+        "original_url": {"type": "string"},
+        "media_type": {"type": "string"}
+      },
+      "anyOf": [
+        {"required": ["asset_id"]},
+        {"required": ["path"]},
+        {"required": ["original_url"]}
+      ],
+      "additionalProperties": false
+    },
+    "timing": {
+      "type": "object",
+      "required": ["start_seconds", "duration_seconds", "trim_start_seconds", "start_ticks", "duration_ticks", "trim_start_ticks", "speed"],
+      "properties": {
+        "start_seconds": {"type": "number", "minimum": 0},
+        "duration_seconds": {"type": "number", "minimum": 0},
+        "trim_start_seconds": {"type": "number", "minimum": 0},
+        "trim_end_seconds": {"type": "number", "minimum": 0},
+        "source_duration_seconds": {"type": "number", "minimum": 0},
+        "start_ticks": {"type": "integer", "minimum": 0},
+        "duration_ticks": {"type": "integer", "minimum": 0},
+        "trim_start_ticks": {"type": "integer", "minimum": 0},
+        "trim_end_ticks": {"type": "integer", "minimum": 0},
+        "speed": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "transform": {
+      "type": "object",
+      "properties": {
+        "x": {"type": "number"},
+        "y": {"type": "number"},
+        "width": {"type": "number", "minimum": 0},
+        "height": {"type": "number", "minimum": 0},
+        "scale": {"type": "number", "minimum": 0},
+        "scale_x": {"type": "number", "minimum": 0},
+        "scale_y": {"type": "number", "minimum": 0},
+        "rotation_degrees": {"type": "number"},
+        "opacity": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "additionalProperties": false
+    },
+    "audio": {
+      "type": "object",
+      "properties": {
+        "volume": {"type": "number", "minimum": 0, "maximum": 2},
+        "pan": {"type": "number", "minimum": -1, "maximum": 1},
+        "muted": {"type": "boolean"},
+        "maintain_pitch": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "mask": {
+      "type": "object",
+      "required": ["shape"],
+      "properties": {
+        "shape": {"type": "string", "enum": ["split", "rectangle", "ellipse", "star", "heart", "diamond", "cinematic_bars"]},
+        "x": {"type": "number"},
+        "y": {"type": "number"},
+        "width": {"type": "number", "minimum": 0},
+        "height": {"type": "number", "minimum": 0},
+        "rotation_degrees": {"type": "number"},
+        "feather": {"type": "number", "minimum": 0},
+        "stroke_width": {"type": "number", "minimum": 0},
+        "inverted": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "text": {
+      "type": "object",
+      "required": ["content"],
+      "properties": {
+        "content": {"type": "string"},
+        "font_family": {"type": "string"},
+        "font_size": {"type": "number", "minimum": 0},
+        "color": {"type": "string"},
+        "align": {"type": "string", "enum": ["left", "center", "right"]}
+      },
+      "additionalProperties": false
+    },
+    "keyframe_channel": {
+      "type": "object",
+      "required": ["property", "interpolation", "points"],
+      "properties": {
+        "property": {"type": "string"},
+        "interpolation": {"type": "string", "enum": ["hold", "linear", "bezier"]},
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["time_seconds", "time_ticks", "value"],
+            "properties": {
+              "time_seconds": {"type": "number", "minimum": 0},
+              "time_ticks": {"type": "integer", "minimum": 0},
+              "value": {},
+              "easing": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "scene_id": {"type": "string"},
+        "script_section_id": {"type": "string"},
+        "source_tool": {"type": "string"},
+        "provider": {"type": "string"},
+        "model": {"type": "string"},
+        "prompt": {"type": "string"},
+        "license": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "regeneration": {
+      "type": "object",
+      "required": ["strategy", "status"],
+      "properties": {
+        "strategy": {"type": "string", "enum": ["replace", "preserve_timing", "manual_only"]},
+        "status": {"type": "string", "enum": ["available", "unavailable", "protected"]},
+        "protected_fields": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "operation": {
+      "type": "object",
+      "required": ["id", "type", "target_id", "payload", "inverse", "actor", "status", "created_at"],
+      "properties": {
+        "id": {"type": "string"},
+        "type": {
+          "type": "string",
+          "enum": ["move", "trim", "replace_asset", "set_volume", "set_speed", "update_text", "set_transform", "set_mask", "set_keyframes"]
+        },
+        "target_id": {"type": "string"},
+        "payload": {"type": "object", "additionalProperties": true},
+        "inverse": {"type": "object", "additionalProperties": true},
+        "actor": {"type": "string", "enum": ["agent", "human", "import"]},
+        "status": {"type": "string", "enum": ["applied", "undone"]},
+        "created_at": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

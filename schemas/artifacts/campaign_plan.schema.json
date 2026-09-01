@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/campaign_plan",
+  "title": "Campaign Plan",
+  "description": "Approved creative modules, experiment variants, and delivery profiles for deterministic batch production.",
+  "type": "object",
+  "required": [
+    "version",
+    "campaign_id",
+    "title",
+    "modules",
+    "variants",
+    "profiles",
+    "experiment",
+    "output_dir"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "campaign_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/module"
+      }
+    },
+    "variants": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/variant"
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    },
+    "experiment": {
+      "$ref": "#/$defs/experiment"
+    },
+    "output_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "trim": {
+      "type": "object",
+      "required": ["start_seconds", "end_seconds"],
+      "properties": {
+        "start_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "module": {
+      "type": "object",
+      "required": ["id", "role", "source_path"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["hook", "body", "cta"]
+        },
+        "source_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile_sources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "trim": {
+          "$ref": "#/$defs/trim"
+        },
+        "captions_path": {
+          "type": "string"
+        },
+        "captions_timebase": {
+          "type": "string",
+          "enum": ["module", "source"],
+          "default": "module"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "selection": {
+      "type": "object",
+      "required": ["hook", "body", "cta"],
+      "properties": {
+        "hook": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cta": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "variant": {
+      "type": "object",
+      "required": ["id", "selection"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        },
+        "profile_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "subtitle_style": {
+      "type": "object",
+      "properties": {
+        "font": {
+          "type": "string"
+        },
+        "font_size": {
+          "type": "integer",
+          "minimum": 8
+        },
+        "primary_color": {
+          "type": "string"
+        },
+        "outline_color": {
+          "type": "string"
+        },
+        "outline_width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "margin_v": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "alignment": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9
+        }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "required": ["id", "width", "height", "fps", "fit"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "fps": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "fit": {
+          "type": "string",
+          "enum": ["contain", "cover", "reflow"]
+        },
+        "background_color": {
+          "type": "string",
+          "default": "#000000"
+        },
+        "codec": {
+          "type": "string",
+          "default": "libx264"
+        },
+        "crf": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 51,
+          "default": 20
+        },
+        "preset": {
+          "type": "string",
+          "default": "medium"
+        },
+        "audio_bitrate": {
+          "type": "string",
+          "default": "192k"
+        },
+        "subtitle_style": {
+          "$ref": "#/$defs/subtitle_style"
+        }
+      },
+      "additionalProperties": false
+    },
+    "experiment": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["explicit", "full_factorial"]
+        },
+        "control_variant_id": {
+          "type": "string"
+        },
+        "max_changed_dimensions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3,
+          "default": 2
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

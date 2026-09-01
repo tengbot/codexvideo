@@ -1,0 +1,139 @@
+name: faceless-narrative
+version: "1.0"
+description: >
+  Research-led faceless short-form video with English narration, evidence-linked
+  B-roll or generated visuals, dynamic captions, music, and a repeatable format.
+category: generated
+stability: beta
+default_checkpoint_policy: guided
+
+orchestration:
+  mode: executive-producer
+  skill: pipelines/faceless-narrative/executive-producer
+  budget_default_usd: 3.00
+  max_revisions_per_stage: 3
+  max_send_backs: 3
+  max_wall_time_minutes: 30
+
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
+required_skills:
+  - core/content-formats
+  - core/raw-footage-editing
+  - pipelines/faceless-narrative/executive-producer
+  - pipelines/faceless-narrative/research-director
+  - pipelines/faceless-narrative/proposal-director
+  - pipelines/faceless-narrative/script-director
+  - pipelines/faceless-narrative/scene-director
+  - pipelines/faceless-narrative/asset-director
+  - pipelines/faceless-narrative/edit-director
+  - pipelines/faceless-narrative/compose-director
+  - pipelines/faceless-narrative/publish-director
+  - meta/reviewer
+  - meta/checkpoint-protocol
+
+compatible_playbooks:
+  recommended: [clean-professional, flat-motion-graphics]
+  also_works: [minimalist-diagram]
+  custom_allowed: true
+
+stages:
+  - name: research
+    skill: pipelines/faceless-narrative/research-director
+    produces: [research_brief]
+    tools_available: []
+    checkpoint_required: false
+    human_approval_default: false
+    success_criteria:
+      - Consumer need and search intent are explicit
+      - Every product or factual claim has a source reference
+
+  - name: proposal
+    skill: pipelines/faceless-narrative/proposal-director
+    required_artifacts_in: [research_brief]
+    produces: [proposal_packet, hook_candidates, decision_log]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - At least three need-driven hooks are scored
+      - Selected hook and render runtime are approved
+
+  - name: script
+    skill: pipelines/faceless-narrative/script-director
+    required_artifacts_in: [proposal_packet, hook_candidates]
+    optional_artifacts_in: [research_brief]
+    produces: [script]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Narration follows hook, conflict, development, reveal, landing
+      - Duration is within ten percent of target
+
+  - name: scene_plan
+    skill: pipelines/faceless-narrative/scene-director
+    required_artifacts_in: [script]
+    optional_artifacts_in: [research_brief, proposal_packet]
+    produces: [scene_plan]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Full narration is covered without gaps
+      - Visual intent changes at a short-form cadence
+
+  - name: assets
+    skill: pipelines/faceless-narrative/asset-director
+    required_artifacts_in: [scene_plan, script]
+    produces: [asset_manifest, visual_match, audio_timeline]
+    required_tools: [tts_selector]
+    optional_tools: [direct_clip_search, image_selector, video_selector, music_gen, subtitle_gen]
+    tools_available: [tts_selector, direct_clip_search, image_selector, video_selector, music_gen, subtitle_gen]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Every scene has a selected and provenance-tracked asset
+      - Narration and word timing files exist
+
+  - name: edit
+    skill: pipelines/faceless-narrative/edit-director
+    required_artifacts_in: [scene_plan, asset_manifest, visual_match, audio_timeline]
+    produces: [edit_decisions, editable_timeline]
+    optional_artifacts_in: [source_transcript]
+    optional_tools: [raw_transcript, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
+    tools_available: [editable_timeline, raw_transcript, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Timeline follows narration timing without gaps
+      - Captions and music ducking are configured
+
+  - name: compose
+    skill: pipelines/faceless-narrative/compose-director
+    required_artifacts_in: [edit_decisions, asset_manifest]
+    optional_artifacts_in: [scene_plan, editable_timeline, source_transcript]
+    produces: [render_report, final_review]
+    required_tools: [video_compose, audio_mixer]
+    optional_tools: [video_stitch, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
+    tools_available: [video_compose, hyperframes_compose, audio_mixer, video_stitch, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Final video decodes cleanly and preserves the approved runtime
+      - Content, visual, caption, and audio reviews pass
+      - Raw-footage routes include a cut_qa_report and every-boundary timeline views
+
+  - name: publish
+    skill: pipelines/faceless-narrative/publish-director
+    required_artifacts_in: [render_report, final_review]
+    produces: [publish_log]
+    tools_available: [export_bundle]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Local export bundle contains video, captions, scripts, sources, and QA

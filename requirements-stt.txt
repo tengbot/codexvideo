@@ -1,0 +1,3 @@
+# OpenMontage - Local speech-to-text dependencies
+-r requirements.txt
+faster-whisper>=1.2,<2
