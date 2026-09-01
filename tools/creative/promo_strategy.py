@@ -26,7 +26,7 @@ class PromoStrategy(BaseTool):
     """Rank pains, enforce the three-second hook gate, and close the learning loop."""
 
     name = "promo_strategy"
-    version = "1.0.0"
+    version = "1.1.0"
     tier = ToolTier.ANALYZE
     stability = ToolStability.BETA
     determinism = Determinism.DETERMINISTIC
@@ -37,13 +37,15 @@ class PromoStrategy(BaseTool):
     capabilities = [
         "pain_ranking",
         "three_second_hook_gate",
+        "audience_job_validation",
+        "script_quality_gate",
         "promotion_contract_validation",
         "creative_metric_diagnosis",
     ]
     best_for = [
         "Ranking an evidence-linked library of consumer pains",
-        "Rejecting hooks that hide the pain or exceed the first three seconds",
-        "Checking pain, claim, proof, script, and CTA references before rendering",
+        "Rejecting hooks that hide the pain, lack support, break their body promise, or exceed three seconds",
+        "Checking audience job, pain, claim, proof, script quality, and CTA references before rendering",
         "Turning hold, click, and conversion metrics into the next creative action",
     ]
     not_good_for = ["Inventing product claims", "Writing copy without evidence"]
@@ -55,8 +57,11 @@ class PromoStrategy(BaseTool):
             "pain_library_path": {"type": "string"},
             "hook_candidates_path": {"type": "string"},
             "product_truth_path": {"type": "string"},
+            "audience_job_path": {"type": "string"},
             "value_map_path": {"type": "string"},
             "creative_brief_path": {"type": "string"},
+            "script_path": {"type": "string"},
+            "script_qa_report_path": {"type": "string"},
             "proof_plan_path": {"type": "string"},
             "output_path": {"type": "string"},
             "top_n": {"type": "integer", "minimum": 1, "maximum": 5},
@@ -75,7 +80,8 @@ class PromoStrategy(BaseTool):
     resource_profile = ResourceProfile(cpu_cores=1, ram_mb=128, vram_mb=0, disk_mb=16, network_required=False)
     user_visible_verification = [
         "Confirm selected pains are the highest ranked evidence-linked entries",
-        "Confirm every selected hook passes the three-second gate",
+        "Confirm every selected hook passes credibility, payoff, speakability, and three-second gates",
+        "Confirm the selected audience job and script quality report pass before proof planning",
         "Confirm every persuasive claim has a concrete proof scene",
     ]
 
@@ -139,22 +145,58 @@ class PromoStrategy(BaseTool):
         max_seconds = float(inputs.get("max_hook_seconds", 3.0))
         brands = [name.lower().strip() for name in inputs.get("brand_names", []) if name.strip()]
         failures: list[dict[str, Any]] = []
+        strict_quality = evaluated.get("version") == "1.1"
         for candidate in evaluated["candidates"]:
             text = candidate["text"].strip()
             word_count = len(re.findall(r"\b[\w']+\b", text))
-            duration = float(candidate.get("spoken_duration_seconds") or word_count / words_per_second)
+            speakability = candidate.get("speakability") or {}
+            if strict_quality and speakability.get("duration_source") != "estimated":
+                duration = float(speakability["duration_seconds"])
+            else:
+                duration = float(candidate.get("spoken_duration_seconds") or word_count / words_per_second)
+                if strict_quality:
+                    speakability["duration_seconds"] = round(duration, 3)
             candidate["spoken_duration_seconds"] = round(duration, 3)
+            if strict_quality:
+                speakability["word_count"] = word_count
             lower = text.lower()
             brand_first = any(lower.startswith(name) for name in brands)
             pain_is_explicit = bool(candidate.get("pain_id")) and any(marker in lower for marker in self._PAIN_MARKERS)
             visual_sync = bool(candidate.get("first_frame", "").strip())
-            passes = duration <= max_seconds and pain_is_explicit and not brand_first and visual_sync
-            notes = self._hook_notes(duration, max_seconds, pain_is_explicit, brand_first, visual_sync)
+            evidence_refs = set(candidate.get("evidence_refs") or [])
+            credibility_refs = set((candidate.get("credibility") or {}).get("source_refs") or [])
+            credibility_supported = not strict_quality or bool(credibility_refs) and credibility_refs.issubset(evidence_refs)
+            body_payoff_matches = not strict_quality or bool((candidate.get("body_payoff") or {}).get("matches"))
+            speakability_passes = not strict_quality or (
+                bool(speakability.get("passes")) and duration <= max_seconds
+            )
+            passes = all((
+                duration <= max_seconds,
+                pain_is_explicit,
+                not brand_first,
+                visual_sync,
+                credibility_supported,
+                body_payoff_matches,
+                speakability_passes,
+            ))
+            notes = self._hook_notes(
+                duration,
+                max_seconds,
+                pain_is_explicit,
+                brand_first,
+                visual_sync,
+                credibility_supported,
+                body_payoff_matches,
+                speakability_passes,
+            )
             candidate["three_second_gate"] = {
                 "passes": passes,
                 "pain_is_explicit": pain_is_explicit,
                 "brand_first": brand_first,
                 "visual_sync": visual_sync,
+                "credibility_supported": credibility_supported,
+                "body_payoff_matches": body_payoff_matches,
+                "speakability_passes": speakability_passes,
                 "notes": notes,
             }
             if not passes:
@@ -188,6 +230,17 @@ class PromoStrategy(BaseTool):
             artifact = self._read_json(path)
             validate_artifact(name, artifact)
             artifacts[name] = artifact
+        hook_version = artifacts["hook_candidates"].get("version")
+        brief_version = artifacts["creative_brief"].get("version")
+        strict_contract = hook_version == "1.1" or brief_version == "1.1"
+        if strict_contract and hook_version != brief_version:
+            raise ValueError("Hook candidates and creative brief must use the same contract version")
+        if strict_contract:
+            for name in ("audience_job", "script", "script_qa_report"):
+                path = self._required_path(inputs, f"{name}_path")
+                artifact = self._read_json(path)
+                validate_artifact(name, artifact)
+                artifacts[name] = artifact
         truth = artifacts["product_truth"]
         pains = {pain["id"]: pain for pain in artifacts["pain_library"]["pains"]}
         claims = {claim["id"]: claim for claim in truth["claims"]}
@@ -198,6 +251,17 @@ class PromoStrategy(BaseTool):
             raise ValueError("Creative brief product_id does not match product truth")
         if brief["pain_id"] not in pains:
             raise ValueError(f"Unknown creative pain_id: {brief['pain_id']}")
+        if "audience_job" in artifacts:
+            if artifacts["audience_job"]["product_id"] != truth["product_id"]:
+                raise ValueError("Audience job product_id does not match product truth")
+            profiles = {profile["id"]: profile for profile in artifacts["audience_job"]["profiles"]}
+            profile = profiles.get(brief.get("audience_job_id"))
+            if profile is None:
+                raise ValueError("Creative brief audience_job_id does not exist")
+            if brief["pain_id"] not in profile["pain_ids"]:
+                raise ValueError("Creative audience job does not match the selected pain")
+            if profile["id"] not in artifacts["audience_job"]["selected_profile_ids"]:
+                raise ValueError("Creative audience job has not been selected")
         mapping = mappings.get(brief["value_mapping_id"])
         if mapping is None or mapping["pain_id"] != brief["pain_id"]:
             raise ValueError("Creative value mapping does not match the selected pain")
@@ -212,6 +276,20 @@ class PromoStrategy(BaseTool):
             raise ValueError("Creative hook does not match the selected pain")
         if not (hook.get("three_second_gate") or {}).get("passes"):
             raise ValueError("Selected hook has not passed the three-second gate")
+        if "script" in artifacts:
+            script = artifacts["script"]
+            if script["sections"][0]["text"].strip() != hook["text"].strip():
+                raise ValueError("Production script does not use the approved hook verbatim")
+            qa_report = artifacts["script_qa_report"]
+            if qa_report["language"] != brief["language"]:
+                raise ValueError("Script QA language does not match the creative brief")
+            if qa_report["desired_viewer_response"] != brief["desired_viewer_response"]:
+                raise ValueError("Script QA viewer response does not match the creative brief")
+            failed_checks = [name for name, check in qa_report["checks"].items() if not check["passes"]]
+            if qa_report["overall_status"] != "pass" or failed_checks:
+                raise ValueError(f"Script quality gate has not passed: {failed_checks}")
+            if qa_report["approval"]["status"] not in {"approved", "approved_with_changes"}:
+                raise ValueError("Script quality report has not been approved")
         structure = brief["structure"]
         if structure[0]["beat"] != "hook" or structure[0]["start_seconds"] != 0:
             raise ValueError("Creative structure must start with a hook at 0 seconds")
@@ -235,6 +313,8 @@ class PromoStrategy(BaseTool):
             "pain_id": brief["pain_id"],
             "claim_ids": mapping["claim_ids"],
             "hook_id": brief["hook_id"],
+            "audience_job_id": brief.get("audience_job_id"),
+            "script_qa_status": (artifacts.get("script_qa_report") or {}).get("overall_status"),
             "proof_scene_count": len(artifacts["proof_plan"]["scenes"]),
             "status": "ready_for_production",
         })
@@ -295,17 +375,32 @@ class PromoStrategy(BaseTool):
         return ToolResult(success=True, data={"experiment_result": result}, artifacts=artifacts)
 
     @staticmethod
-    def _hook_notes(duration: float, max_seconds: float, pain: bool, brand: bool, visual: bool) -> str:
+    def _hook_notes(
+        duration: float,
+        max_seconds: float,
+        pain: bool,
+        brand: bool,
+        visual: bool,
+        credibility: bool,
+        payoff: bool,
+        speakability: bool,
+    ) -> str:
         issues = []
         if duration > max_seconds:
-            issues.append(f"estimated speech is {duration:.2f}s")
+            issues.append(f"spoken duration is {duration:.2f}s")
         if not pain:
             issues.append("pain is not explicit in consumer language")
         if brand:
             issues.append("hook starts with the brand")
         if not visual:
             issues.append("first frame is missing")
-        return "; ".join(issues) if issues else "passes duration, pain, brand, and visual-sync gates"
+        if not credibility:
+            issues.append("credibility references are missing or outside the evidence set")
+        if not payoff:
+            issues.append("body payoff does not match the opening promise")
+        if not speakability:
+            issues.append("spoken delivery gate failed")
+        return "; ".join(issues) if issues else "passes duration, pain, brand, visual, credibility, payoff, and speakability gates"
 
     @staticmethod
     def _required_path(inputs: dict[str, Any], key: str) -> Path:

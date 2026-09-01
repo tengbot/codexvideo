@@ -6,13 +6,12 @@
   "type": "object",
   "required": ["version", "topic", "audience", "candidates", "approval"],
   "properties": {
-    "version": {"type": "string", "const": "1.0"},
+    "version": {"type": "string", "enum": ["1.0", "1.1"]},
     "topic": {"type": "string", "minLength": 1},
     "audience": {"type": "string", "minLength": 1},
     "candidates": {
       "type": "array",
-      "minItems": 3,
-      "items": {"$ref": "#/$defs/candidate"}
+      "minItems": 3
     },
     "selected_id": {"type": ["string", "null"]},
     "selected_ids": {
@@ -31,8 +30,26 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"version": {"const": "1.1"}},
+        "required": ["version"]
+      },
+      "then": {
+        "properties": {
+          "candidates": {"items": {"$ref": "#/$defs/candidateV11"}}
+        }
+      },
+      "else": {
+        "properties": {
+          "candidates": {"items": {"$ref": "#/$defs/candidateV1"}}
+        }
+      }
+    }
+  ],
   "$defs": {
-    "candidate": {
+    "candidateBase": {
       "type": "object",
       "required": ["id", "text", "human_need", "promise", "format_fits", "scores", "evidence_refs"],
       "properties": {
@@ -55,6 +72,50 @@
             "pain_is_explicit": {"type": "boolean"},
             "brand_first": {"type": "boolean"},
             "visual_sync": {"type": "boolean"},
+            "credibility_supported": {"type": "boolean"},
+            "body_payoff_matches": {"type": "boolean"},
+            "speakability_passes": {"type": "boolean"},
+            "notes": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        "credibility": {
+          "type": "object",
+          "required": ["basis", "claim_scope", "source_refs"],
+          "properties": {
+            "basis": {
+              "type": "string",
+              "enum": ["product_truth", "consumer_language", "visible_demonstration", "measured_result", "qualified_claim"]
+            },
+            "claim_scope": {"type": "string", "minLength": 1},
+            "source_refs": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            }
+          },
+          "additionalProperties": false
+        },
+        "body_payoff": {
+          "type": "object",
+          "required": ["promise", "payoff_beat", "matches"],
+          "properties": {
+            "promise": {"type": "string", "minLength": 1},
+            "payoff_beat": {"type": "string", "enum": ["solution", "proof", "cta"]},
+            "matches": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        },
+        "speakability": {
+          "type": "object",
+          "required": ["language", "word_count", "duration_seconds", "duration_source", "passes"],
+          "properties": {
+            "language": {"type": "string", "minLength": 2},
+            "word_count": {"type": "integer", "minimum": 1},
+            "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+            "duration_source": {"type": "string", "enum": ["estimated", "tts_sample", "recorded_read"]},
+            "passes": {"type": "boolean"},
             "notes": {"type": "string"}
           },
           "additionalProperties": false
@@ -83,6 +144,15 @@
         }
       },
       "additionalProperties": false
+    },
+    "candidateV1": {
+      "$ref": "#/$defs/candidateBase"
+    },
+    "candidateV11": {
+      "allOf": [
+        {"$ref": "#/$defs/candidateBase"},
+        {"required": ["credibility", "body_payoff", "speakability"]}
+      ]
     }
   },
   "additionalProperties": false

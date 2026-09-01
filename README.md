@@ -40,8 +40,9 @@ The difficult work happens between an idea and a finished edit: understanding wh
 CodexVideo turns that work into an inspectable production process:
 
 ```text
-product truth -> consumer pain -> hook -> script -> proof plan -> shot plan
--> assets -> voice -> composition -> captions -> QA -> campaign variants
+product truth -> consumer pain -> hook -> approved production preset -> script
+-> proof plan -> continuity bible -> shot plan -> assets -> voice
+-> composition -> captions -> QA -> campaign variants
 ```
 
 Codex is the control plane. It reads the selected YAML pipeline, follows stage-specific production skills, calls local or cloud tools, records decisions, and stops at configured approval gates. Python provides tools and persistence; Remotion, HyperFrames, and FFmpeg provide the render floor.
@@ -52,7 +53,7 @@ Codex is the control plane. It reads the selected YAML pipeline, follows stage-s
 
 | Format | What the viewer gets | Best starting pipeline |
 | --- | --- | --- |
-| **Product promotion** | A pain-first product story with a three-second hook, visual proof, and one clear CTA | `product-promo-factory` |
+| **Product promotion** | A consumer-job-led product story with a three-second hook, spoken-script QA, visual proof, and one clear CTA | `product-promo-factory` |
 | **Faceless narrative** | English narration, purposeful B-roll or generated motion, dynamic captions, music, and no on-camera presenter | `faceless-narrative` |
 | **AI dialogue podcast** | Two distinct hosts, a guided consumer conversation, stable visual continuity, evidence inserts, and captions | `ai-dialogue-podcast` |
 | **Footage repurposing** | Transcript-aligned clips, scored candidates, confirmed cut points, reframing, subtitles, and batch exports | `clip-factory` or `podcast-repurpose` |
@@ -162,7 +163,7 @@ This makes it possible to stop after the script, revise one scene, rerun a faile
 
 | Pipeline | Primary job |
 | --- | --- |
-| `product-promo-factory` | Consumer-pain research, hooks, proof planning, product shots, and campaign variants |
+| `product-promo-factory` | Consumer-job and pain research, evidence-backed hooks, English spoken-script QA, proof planning, product shots, and campaign variants |
 | `faceless-narrative` | Narration-led short-form video with sourced or generated visuals |
 | `ai-dialogue-podcast` | Two-host conversational product storytelling |
 | `screen-demo` | Software walkthroughs and interface demonstrations |
@@ -232,6 +233,8 @@ codexvideo/
 ```
 
 For the full system description, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+For exact upstream licenses, pinned commits, integration paths, and execution
+status, see [`docs/CAPABILITY_PROVENANCE.md`](docs/CAPABILITY_PROVENANCE.md).
 
 ## API Keys and Cost
 

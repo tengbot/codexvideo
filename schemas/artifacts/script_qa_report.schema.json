@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/script_qa_report",
+  "title": "Script QA Report",
+  "description": "Evidence-based retention, payoff, and spoken-delivery review performed before proof planning and asset production.",
+  "type": "object",
+  "required": [
+    "version",
+    "script_ref",
+    "language",
+    "target_duration_seconds",
+    "desired_viewer_response",
+    "core_claim",
+    "delivery_measurement",
+    "checks",
+    "section_reviews",
+    "revision_actions",
+    "overall_status",
+    "approval"
+  ],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "script_ref": {"type": "string", "minLength": 1},
+    "language": {"type": "string", "minLength": 2},
+    "target_duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "desired_viewer_response": {
+      "type": "string",
+      "enum": ["understand", "agree", "feel_relief", "remember", "save", "comment", "share", "click", "start_trial", "purchase", "other"]
+    },
+    "core_claim": {"type": "string", "minLength": 1},
+    "delivery_measurement": {
+      "type": "object",
+      "required": ["method", "measured", "total_words", "duration_seconds", "words_per_second"],
+      "properties": {
+        "method": {"type": "string", "enum": ["estimate", "tts_sample", "recorded_read"]},
+        "measured": {"type": "boolean"},
+        "total_words": {"type": "integer", "minimum": 1},
+        "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "words_per_second": {"type": "number", "exclusiveMinimum": 0},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "object",
+      "required": ["single_core_claim", "hook_payoff", "evidence_coverage", "flow_continuity", "density_balance", "spoken_delivery"],
+      "properties": {
+        "single_core_claim": {"$ref": "#/$defs/check"},
+        "hook_payoff": {"$ref": "#/$defs/check"},
+        "evidence_coverage": {"$ref": "#/$defs/check"},
+        "flow_continuity": {"$ref": "#/$defs/check"},
+        "density_balance": {"$ref": "#/$defs/check"},
+        "spoken_delivery": {"$ref": "#/$defs/check"}
+      },
+      "additionalProperties": false
+    },
+    "section_reviews": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/sectionReview"}
+    },
+    "revision_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["section_id", "priority", "action", "reason"],
+        "properties": {
+          "section_id": {"type": "string", "minLength": 1},
+          "priority": {"type": "string", "enum": ["required", "recommended", "optional"]},
+          "action": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "overall_status": {"type": "string", "enum": ["pass", "revise", "block"]},
+    "approval": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {"type": "string", "enum": ["pending", "approved", "approved_with_changes", "rejected"]},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "metadata": {"type": "object"}
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "required": ["passes", "evidence"],
+      "properties": {
+        "passes": {"type": "boolean"},
+        "evidence": {"type": "string", "minLength": 1},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "sectionReview": {
+      "type": "object",
+      "required": [
+        "section_id",
+        "function",
+        "source_quote",
+        "word_count",
+        "duration_seconds",
+        "words_per_second",
+        "sentence_count",
+        "max_sentence_words",
+        "breath_group_count",
+        "severity",
+        "issues",
+        "recommendation"
+      ],
+      "properties": {
+        "section_id": {"type": "string", "minLength": 1},
+        "function": {"type": "string", "enum": ["hook", "pain", "solution", "proof", "cta", "transition", "other"]},
+        "source_quote": {"type": "string"},
+        "word_count": {"type": "integer", "minimum": 0},
+        "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "words_per_second": {"type": "number", "minimum": 0},
+        "sentence_count": {"type": "integer", "minimum": 0},
+        "max_sentence_words": {"type": "integer", "minimum": 0},
+        "breath_group_count": {"type": "integer", "minimum": 0},
+        "severity": {"type": "string", "enum": ["clear", "low", "medium", "high", "blocking"]},
+        "issues": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["logic_gap", "repetition", "density_drop", "oral_friction", "unsupported_claim", "promise_mismatch", "too_many_ideas", "cta_ambiguity"]
+          }
+        },
+        "recommendation": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/audience_job",
+  "title": "Audience Job",
+  "description": "Evidence-linked consumer progress profiles used to keep product promotion grounded in a real situation and desired outcome.",
+  "type": "object",
+  "required": ["version", "product_id", "audience", "profiles", "selected_profile_ids", "approval"],
+  "properties": {
+    "version": {"type": "string", "const": "1.0"},
+    "product_id": {"type": "string", "minLength": 1},
+    "audience": {"type": "string", "minLength": 1},
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {"$ref": "#/$defs/profile"}
+    },
+    "selected_profile_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "approval": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {"type": "string", "enum": ["pending", "approved", "approved_with_changes", "rejected"]},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "metadata": {"type": "object"}
+  },
+  "$defs": {
+    "stringList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "id",
+        "pain_ids",
+        "situation",
+        "desired_progress",
+        "job_statement",
+        "job_dimensions",
+        "switching_forces",
+        "choice_criteria",
+        "evidence_refs",
+        "confidence",
+        "unknowns"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "pain_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "situation": {"type": "string", "minLength": 1},
+        "desired_progress": {"type": "string", "minLength": 1},
+        "job_statement": {"type": "string", "minLength": 1},
+        "job_dimensions": {
+          "type": "object",
+          "required": ["functional", "emotional", "social"],
+          "properties": {
+            "functional": {"$ref": "#/$defs/stringList"},
+            "emotional": {"$ref": "#/$defs/stringList"},
+            "social": {"$ref": "#/$defs/stringList"}
+          },
+          "additionalProperties": false
+        },
+        "switching_forces": {
+          "type": "object",
+          "required": ["push", "pull", "anxiety", "habit"],
+          "properties": {
+            "push": {"$ref": "#/$defs/stringList"},
+            "pull": {"$ref": "#/$defs/stringList"},
+            "anxiety": {"$ref": "#/$defs/stringList"},
+            "habit": {"$ref": "#/$defs/stringList"}
+          },
+          "additionalProperties": false
+        },
+        "choice_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["criterion", "observable_signal", "evidence_refs"],
+            "properties": {
+              "criterion": {"type": "string", "minLength": 1},
+              "observable_signal": {"type": "string", "minLength": 1},
+              "evidence_refs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1}
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "confidence": {"type": "number", "minimum": 0, "maximum": 5},
+        "unknowns": {"$ref": "#/$defs/stringList"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

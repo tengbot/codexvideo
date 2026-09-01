@@ -2,18 +2,23 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "openmontage/artifacts/creative_brief",
   "title": "Promotion Creative Brief",
-  "description": "Locks one audience, pain, promise, proof strategy, format, and CTA before production.",
+  "description": "Locks one audience job, pain, promise, viewer response, proof strategy, format, and CTA before production.",
   "type": "object",
   "required": ["version", "creative_id", "product_id", "audience", "pain_id", "value_mapping_id", "hook_id", "message", "format", "language", "destination", "aspect", "duration_seconds", "structure", "approval"],
   "properties": {
-    "version": {"type": "string", "const": "1.0"},
+    "version": {"type": "string", "enum": ["1.0", "1.1"]},
     "creative_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
     "product_id": {"type": "string", "minLength": 1},
     "audience": {"type": "string", "minLength": 1},
+    "audience_job_id": {"type": "string", "minLength": 1},
     "pain_id": {"type": "string", "minLength": 1},
     "value_mapping_id": {"type": "string", "minLength": 1},
     "hook_id": {"type": "string", "minLength": 1},
     "message": {"type": "string", "minLength": 1},
+    "desired_viewer_response": {
+      "type": "string",
+      "enum": ["understand", "agree", "feel_relief", "remember", "save", "comment", "share", "click", "start_trial", "purchase", "other"]
+    },
     "format": {"type": "string", "enum": ["faceless_narrative", "screen_demo", "motion_graphics", "avatar_spokesperson", "ai_dialogue_podcast", "hybrid"]},
     "language": {"type": "string", "minLength": 2},
     "destination": {"type": "string", "enum": ["tiktok", "instagram_reels", "youtube_shorts", "x", "linkedin", "youtube", "embed", "other"]},
@@ -46,5 +51,14 @@
     },
     "metadata": {"type": "object"}
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"version": {"const": "1.1"}},
+        "required": ["version"]
+      },
+      "then": {"required": ["audience_job_id", "desired_viewer_response"]}
+    }
+  ],
   "additionalProperties": false
 }

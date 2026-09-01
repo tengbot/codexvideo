@@ -1,9 +1,11 @@
 name: product-promo-factory
-version: "1.0"
+version: "1.2"
 description: >
   Evidence-led product promotion pipeline. It starts from verified product truth,
-  ranks 20-50 consumer pains, maps one pain to one value proposition, gates the
-  opening three seconds, requires visual proof, and produces controlled variants.
+  ranks 20-50 consumer pains, models the consumer progress behind each selected
+  pain, maps one job to one value proposition, gates the opening three seconds,
+  reviews spoken-script retention, materializes resumable production settings,
+  locks cross-scene visual continuity, requires visual proof, and produces controlled variants.
 category: hybrid
 stability: beta
 default_checkpoint_policy: guided
@@ -27,12 +29,16 @@ required_skills:
   - pipelines/product-promo-factory/executive-producer
   - pipelines/product-promo-factory/product-truth-director
   - pipelines/product-promo-factory/pain-research-director
+  - pipelines/product-promo-factory/audience-job-director
   - pipelines/product-promo-factory/value-director
   - pipelines/product-promo-factory/hook-director
   - pipelines/product-promo-factory/creative-director
   - pipelines/product-promo-factory/proposal-director
+  - pipelines/product-promo-factory/production-contract-director
   - pipelines/product-promo-factory/script-director
+  - pipelines/product-promo-factory/script-quality-director
   - pipelines/product-promo-factory/proof-director
+  - pipelines/product-promo-factory/continuity-director
   - pipelines/product-promo-factory/shotcraft-director
   - pipelines/product-promo-factory/asset-director
   - pipelines/product-promo-factory/edit-director
@@ -68,20 +74,31 @@ stages:
       - Pain library contains 20-50 evidence-linked consumer pains
       - Top five pains are ranked by demand, urgency, severity, intent, and confidence
 
+  - name: audience_job
+    skill: pipelines/product-promo-factory/audience-job-director
+    required_artifacts_in: [product_truth, pain_library]
+    produces: [audience_job]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Every selected pain maps to an evidence-linked consumer progress profile
+      - Situation, desired progress, switching forces, choice criteria, confidence, and unknowns are explicit
+
   - name: value_mapping
     skill: pipelines/product-promo-factory/value-director
-    required_artifacts_in: [product_truth, pain_library]
+    required_artifacts_in: [product_truth, pain_library, audience_job]
     produces: [value_map]
     tools_available: [promo_strategy]
     checkpoint_required: true
     human_approval_default: false
     success_criteria:
       - Every promise maps to verified product claims and concrete proof
-      - Each candidate creative addresses one pain only
+      - Each candidate creative addresses one pain and one consumer job only
 
   - name: hook_lab
     skill: pipelines/product-promo-factory/hook-director
-    required_artifacts_in: [pain_library, value_map]
+    required_artifacts_in: [pain_library, audience_job, value_map]
     optional_artifacts_in: [product_truth]
     produces: [hook_candidates]
     tools_available: [promo_strategy, tts_selector]
@@ -89,11 +106,11 @@ stages:
     human_approval_default: true
     success_criteria:
       - At least five hooks are produced for each selected pain
-      - Selected hooks state the pain and pass the measured three-second gate
+      - Selected hooks state the pain, cite a credibility basis, promise a matching body payoff, and pass the measured three-second gate
 
   - name: creative_brief
     skill: pipelines/product-promo-factory/creative-director
-    required_artifacts_in: [product_truth, pain_library, value_map, hook_candidates]
+    required_artifacts_in: [product_truth, pain_library, audience_job, value_map, hook_candidates]
     produces: [creative_brief]
     tools_available: [promo_strategy]
     checkpoint_required: true
@@ -113,21 +130,46 @@ stages:
       - Remotion and HyperFrames are both presented when available, with project-specific tradeoffs
       - Runtime, composition mode, providers, sample plan, and cost ceiling are explicitly approved and logged
 
+  - name: production_contract
+    skill: pipelines/product-promo-factory/production-contract-director
+    required_artifacts_in: [creative_brief, proposal_packet, decision_log]
+    produces: [production_preset]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: false
+    success_criteria:
+      - Runtime, composition mode, outputs, batch axes, retries, caching, and cost ceilings match the approved proposal
+      - Successful paid work is content-addressed and never repeated by an unchanged resume
+      - A pending proposal remains pending and does not silently select a provider or renderer
+
   - name: script
     skill: pipelines/product-promo-factory/script-director
-    required_artifacts_in: [creative_brief, proposal_packet, decision_log, hook_candidates, value_map]
+    required_artifacts_in: [creative_brief, proposal_packet, decision_log, hook_candidates, audience_job, value_map]
     optional_artifacts_in: [product_truth, pain_library]
     produces: [script]
     tools_available: []
     checkpoint_required: true
-    human_approval_default: true
+    human_approval_default: false
     success_criteria:
       - Script follows pain, solution, proof, and CTA without a feature-list detour
       - Every factual statement references product truth
 
+  - name: script_quality
+    skill: pipelines/product-promo-factory/script-quality-director
+    required_artifacts_in: [script, creative_brief, hook_candidates, audience_job, product_truth]
+    produces: [script_qa_report]
+    optional_tools: [tts_selector]
+    tools_available: [tts_selector]
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - One core claim and one desired viewer response are preserved through the full script
+      - Hook payoff, evidence coverage, flow, information density, and spoken delivery all pass
+      - English section timing is measured or estimated and every retention risk is tied to an exact line
+
   - name: proof_plan
     skill: pipelines/product-promo-factory/proof-director
-    required_artifacts_in: [creative_brief, script, product_truth]
+    required_artifacts_in: [creative_brief, script, script_qa_report, product_truth]
     produces: [proof_plan, scene_plan]
     tools_available: [promo_strategy]
     checkpoint_required: true
@@ -136,9 +178,21 @@ stages:
       - Every selected claim has a visible proof scene
       - Product captures and result comparisons are not replaced by generic stock footage
 
+  - name: continuity_design
+    skill: pipelines/product-promo-factory/continuity-director
+    required_artifacts_in: [product_truth, creative_brief, proof_plan, scene_plan]
+    produces: [visual_continuity_bible]
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    success_criteria:
+      - Product identity, palette, typography, lighting, camera, motion, and forbidden substitutions are explicit
+      - Every scene inherits named continuity locks and declares entry and exit state matches
+      - Upstream content hashes declare which downstream artifacts become stale when evidence or direction changes
+
   - name: shotcraft_plan
     skill: pipelines/product-promo-factory/shotcraft-director
-    required_artifacts_in: [creative_brief, script, proof_plan]
+    required_artifacts_in: [creative_brief, script, proof_plan, visual_continuity_bible]
     produces: [shot_language_plan]
     required_tools: [shotcraft_catalog]
     tools_available: [shotcraft_catalog]
@@ -151,7 +205,7 @@ stages:
 
   - name: assets
     skill: pipelines/product-promo-factory/asset-director
-    required_artifacts_in: [proof_plan, scene_plan, script, shot_language_plan]
+    required_artifacts_in: [proof_plan, scene_plan, script, production_preset, visual_continuity_bible, shot_language_plan]
     produces: [asset_manifest, visual_match, audio_timeline]
     required_tools: [tts_selector]
     optional_tools: [direct_clip_search, image_selector, video_selector, subtitle_gen]
@@ -164,7 +218,7 @@ stages:
 
   - name: edit
     skill: pipelines/product-promo-factory/edit-director
-    required_artifacts_in: [creative_brief, proposal_packet, decision_log, scene_plan, asset_manifest, visual_match, audio_timeline]
+    required_artifacts_in: [creative_brief, proposal_packet, decision_log, production_preset, scene_plan, asset_manifest, visual_match, audio_timeline]
     produces: [edit_decisions, editable_timeline, campaign_plan]
     tools_available: [editable_timeline, campaign_batch]
     checkpoint_required: true
@@ -175,7 +229,7 @@ stages:
 
   - name: compose
     skill: pipelines/product-promo-factory/compose-director
-    required_artifacts_in: [edit_decisions, asset_manifest, creative_brief, proposal_packet, decision_log]
+    required_artifacts_in: [edit_decisions, asset_manifest, creative_brief, proposal_packet, decision_log, production_preset, visual_continuity_bible]
     optional_artifacts_in: [editable_timeline, campaign_plan, shot_language_plan]
     produces: [render_report, final_review, batch_run]
     required_tools: [video_compose, audio_mixer]
@@ -190,7 +244,7 @@ stages:
   - name: publish
     skill: pipelines/product-promo-factory/publish-director
     required_artifacts_in: [render_report, final_review]
-    optional_artifacts_in: [product_truth, pain_library, value_map, hook_candidates, creative_brief, proof_plan, campaign_plan, batch_run]
+    optional_artifacts_in: [product_truth, pain_library, value_map, hook_candidates, creative_brief, production_preset, visual_continuity_bible, proof_plan, campaign_plan, batch_run]
     produces: [publish_log]
     tools_available: [export_bundle]
     checkpoint_required: true
