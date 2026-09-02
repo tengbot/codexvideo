@@ -13,7 +13,7 @@ CodexVideo researches the audience, finds the pain behind the search, writes the
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?logo=python&logoColor=white)](Makefile)
 [![Built on OpenMontage](https://img.shields.io/badge/built_on-OpenMontage-e85d3f.svg)](https://github.com/calesthio/OpenMontage)
 
-**16 production pipelines | 130 registered tools | 29 capabilities**
+**16 production pipelines | 131 registered tools | 29 capabilities**
 
 **No API key is required for the first render.** Run the checked-in Remotion demos locally, then add only the providers your production actually needs.
 
@@ -79,7 +79,7 @@ CodexVideo can deliver `9:16`, `1:1`, and `16:9` outputs, burn captions, append 
 ### Requirements
 
 - Python 3.10 or newer
-- Node.js 18 or newer
+- Node.js 22 or newer
 - FFmpeg
 - Codex
 
@@ -92,6 +92,24 @@ make setup
 ```
 
 `make setup` creates a Python environment, installs the Remotion composer, prepares optional local TTS, warms the HyperFrames runtime, and creates an ignored `.env` from `.env.example`.
+
+### Create a production project
+
+```bash
+codexvideo doctor
+codexvideo styles
+codexvideo create "Sell this product from the consumer viewpoint" \
+  --url https://example.com \
+  --type product-promo \
+  --style cinematic-saas \
+  --destination tiktok \
+  --language en
+```
+
+The command creates a resumable project under `projects/` with a consumer
+request, live capability manifest, pipeline run plan, preview-first budget
+policy, creative QA template, and a `CODEX_TASK.md` that Codex can execute.
+No provider is silently selected and no paid media call occurs during setup.
 
 ### Render the zero-key demos
 
@@ -116,6 +134,10 @@ make hyperframes-doctor
 ```
 
 Preflight discovers the tools that are actually available on the current machine. Codex should use that live capability menu instead of assuming every provider is configured.
+
+`codexvideo doctor` is the consumer-facing version of this check. It groups
+the live registry into local capabilities and optional one-account provider
+packs without reading or printing secret values.
 
 ## Your First Production
 
@@ -232,6 +254,8 @@ codexvideo/
 `-- projects/               # ignored local workspaces and renders
 ```
 
+For the consumer entry point and extension contract, see
+[`docs/CONSUMER_WORKFLOW.md`](docs/CONSUMER_WORKFLOW.md).
 For the full system description, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 For exact upstream licenses, pinned commits, integration paths, and execution
 status, see [`docs/CAPABILITY_PROVENANCE.md`](docs/CAPABILITY_PROVENANCE.md).

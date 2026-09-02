@@ -6,7 +6,7 @@ PIP = $(RUN_PYTHON) -m pip
 
 .DEFAULT_GOAL := setup
 
-.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight demo demo-list hyperframes-doctor hyperframes-warm venv ensure-venv
+.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight demo demo-list hyperframes-doctor hyperframes-warm doctor routes styles venv ensure-venv
 
 # ---- Virtual environment ----
 
@@ -54,6 +54,7 @@ venv: ensure-venv
 setup: ensure-venv
 	@echo "==> Installing Python dependencies..."
 	$(PIP) install -r requirements.txt
+	$(PIP) install -e . --no-deps --no-build-isolation
 	@echo ""
 	@echo "==> Installing Remotion composer..."
 	cd remotion-composer && npm install
@@ -79,6 +80,7 @@ setup: ensure-venv
 
 install: ensure-venv
 	$(PIP) install -r requirements.txt
+	$(PIP) install -e . --no-deps --no-build-isolation
 
 install-dev: ensure-venv
 	$(PIP) install -r requirements-dev.txt
@@ -99,6 +101,15 @@ test-contracts: ensure-venv
 
 preflight: ensure-venv
 	$(RUN_PYTHON) -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.provider_menu(), indent=2))"
+
+doctor: ensure-venv
+	$(RUN_PYTHON) -m codexvideo doctor
+
+routes: ensure-venv
+	$(RUN_PYTHON) -m codexvideo routes
+
+styles: ensure-venv
+	$(RUN_PYTHON) -m codexvideo styles
 
 hyperframes-doctor: ensure-venv
 	@echo "==> Probing HyperFrames runtime (node/ffmpeg/npx + hyperframes doctor)..."

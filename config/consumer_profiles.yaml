@@ -1,0 +1,126 @@
+version: "1.0"
+
+formats:
+  product-promo:
+    label: Product promotion
+    pipeline: product-promo-factory
+    default_style: cinematic-saas
+    default_duration_seconds: 24
+    required_capabilities: [promotion_strategy, shot_design, video_post, audio_processing, subtitle]
+    optional_capabilities: [screen_capture, clip_acquisition, tts, image_generation, video_generation, music_generation]
+  faceless:
+    label: Faceless narrative
+    pipeline: faceless-narrative
+    default_style: faceless-documentary
+    default_duration_seconds: 30
+    required_capabilities: [video_post, audio_processing, subtitle]
+    optional_capabilities: [clip_acquisition, tts, image_generation, video_generation, music_generation]
+  ai-podcast:
+    label: Two-host AI podcast
+    pipeline: ai-dialogue-podcast
+    default_style: ai-podcast-studio
+    default_duration_seconds: 35
+    required_capabilities: [video_post, audio_processing, subtitle]
+    optional_capabilities: [tts, avatar, image_generation, video_generation]
+  avatar:
+    label: Avatar spokesperson
+    pipeline: avatar-spokesperson
+    default_style: ugc-direct-response
+    default_duration_seconds: 25
+    required_capabilities: [video_post, audio_processing, subtitle]
+    optional_capabilities: [tts, avatar, video_generation]
+  screen-demo:
+    label: Product walkthrough
+    pipeline: screen-demo
+    default_style: clean-explainer
+    default_duration_seconds: 35
+    required_capabilities: [screen_capture, video_post, audio_processing, subtitle]
+    optional_capabilities: [tts, music_generation]
+  clip:
+    label: Footage repurposing
+    pipeline: clip-factory
+    default_style: social-editorial
+    default_duration_seconds: 45
+    required_capabilities: [source_ingest, raw_footage_editing, video_post, subtitle]
+    optional_capabilities: [tts, music_generation]
+
+styles:
+  cinematic-saas:
+    label: Cinematic SaaS
+    formats: [product-promo, screen-demo]
+    playbook: clean-professional
+    runtime_preference: hyperframes
+    shotcraft_categories: [camera, interaction, transition, typography, outro]
+    rules: [real-product-proof, one-primary-move, premium-sound-design, no-slideshow]
+  faceless-documentary:
+    label: Faceless Documentary
+    formats: [faceless]
+    playbook: premium-minimalist
+    runtime_preference: hyperframes
+    shotcraft_categories: [opening, typography, rhythm, transition]
+    rules: [evidence-led-broll, narration-visual-match, no-random-stock, no-slideshow]
+  ai-podcast-studio:
+    label: AI Podcast Studio
+    formats: [ai-podcast]
+    playbook: clean-professional
+    runtime_preference: hyperframes
+    shotcraft_categories: [camera, interaction, data, typography]
+    rules: [stable-cast, speaker-eyeline, evidence-inserts, natural-turns]
+  ugc-direct-response:
+    label: UGC Direct Response
+    formats: [avatar, product-promo]
+    playbook: flat-motion-graphics
+    runtime_preference: remotion
+    shotcraft_categories: [opening, typography, interaction, outro]
+    rules: [pain-at-zero, conversational-voice, proof-before-cta, mobile-safe]
+  clean-explainer:
+    label: Clean Explainer
+    formats: [screen-demo, product-promo]
+    playbook: clean-professional
+    runtime_preference: remotion
+    shotcraft_categories: [ui-entrance, interaction, data, typography]
+    rules: [cursor-causality, readable-ui, progressive-disclosure, no-slideshow]
+  social-editorial:
+    label: Social Editorial
+    formats: [clip, faceless]
+    playbook: flat-motion-graphics
+    runtime_preference: ffmpeg
+    shotcraft_categories: [rhythm, typography, transition]
+    rules: [source-first, transcript-aligned, dynamic-captions, preserve-originals]
+
+provider_packs:
+  local-floor:
+    label: Local floor
+    env_vars: []
+    unlocks: [video_post, audio_processing, subtitle, promotion_strategy, shot_design]
+    note: Script, planning, supplied-media editing, composition, captions, and QA without paid generation.
+  fal-creator:
+    label: fal.ai creator
+    env_vars: [FAL_KEY]
+    unlocks: [image_generation, video_generation, music_generation, 3d_asset_generation]
+    note: Broad generation through one account; exact models remain an explicit production choice.
+  google-creator:
+    label: Google creator
+    env_vars: [GOOGLE_API_KEY]
+    unlocks: [image_generation, video_generation, tts]
+    note: Image, video, and voice paths through one account where the selected tools support them.
+  kling-creator:
+    label: Kling creator
+    env_vars: [KLING_API_KEY]
+    unlocks: [image_generation, video_generation, tts, avatar]
+    note: First-party media and avatar routes; paid calls still require a preview estimate.
+  digital-human:
+    label: Digital human
+    env_vars: [HEYGEN_API_KEY, MINIMAX_API_KEY]
+    unlocks: [tts, avatar, video_generation]
+    note: Optional voice-and-avatar path. Consent and identity authorization are mandatory.
+
+destinations:
+  tiktok: {aspect: "9:16", width: 1080, height: 1920, fps: 30}
+  reels: {aspect: "9:16", width: 1080, height: 1920, fps: 30}
+  shorts: {aspect: "9:16", width: 1080, height: 1920, fps: 30}
+  instagram-feed: {aspect: "1:1", width: 1080, height: 1080, fps: 30}
+  x: {aspect: "1:1", width: 1080, height: 1080, fps: 30}
+  linkedin: {aspect: "16:9", width: 1920, height: 1080, fps: 30}
+  youtube: {aspect: "16:9", width: 1920, height: 1080, fps: 30}
+  website: {aspect: "16:9", width: 1920, height: 1080, fps: 30}

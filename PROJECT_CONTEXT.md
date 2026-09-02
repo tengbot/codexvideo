@@ -1,10 +1,14 @@
-# OpenMontage - Shared Project Context
+# CodexVideo - Shared Project Context
 
 This is the single source of truth for project architecture and conventions. All platform-specific agent files (CLAUDE.md, CODEX.md, CURSOR.md, COPILOT.md) should point here instead of duplicating this content.
 
 ## Identity
 
-OpenMontage is an open-source, AI-orchestrated video production platform.
+CodexVideo is a consumer-led, Codex-native video production system built on
+OpenMontage. OpenMontage supplies the general tool and pipeline foundation;
+CodexVideo adds the consumer front door, pain-first promotion contracts,
+plain-language format and style routing, preview-first cost governance, and
+creative quality gates.
 
 ## Architecture: Instruction-Driven (Agent-First)
 
@@ -15,6 +19,10 @@ Agent reads pipeline manifest (YAML) → reads stage director skill (MD)
 → uses tools (Python BaseTool) → self-reviews (meta skill)
 → checkpoints (Python utility) → presents to human for approval
 ```
+
+The consumer entry point is `codexvideo create`. It materializes a request,
+capability manifest, run plan, QA template, and `CODEX_TASK.md`; it does not
+replace the agent or make creative decisions in Python.
 
 **No Python orchestrator, no Python reviewer, no Python handlers.** The agent drives the pipeline.
 

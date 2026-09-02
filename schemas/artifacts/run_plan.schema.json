@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "codexvideo/artifacts/run_plan",
+  "title": "Consumer Run Plan",
+  "type": "object",
+  "required": ["version", "project_id", "created_at", "pipeline", "format", "style", "stage_order", "next_stage", "status", "preview", "cost_policy", "resume", "quality_gates"],
+  "properties": {
+    "version": {"const": "1.0"},
+    "project_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "format": "date-time"},
+    "pipeline": {"type": "string", "minLength": 1},
+    "format": {"type": "string", "minLength": 1},
+    "style": {
+      "type": "object",
+      "required": ["id", "playbook", "runtime_preference", "shotcraft_categories"],
+      "properties": {
+        "id": {"type": "string"},
+        "playbook": {"type": "string"},
+        "runtime_preference": {"enum": ["hyperframes", "remotion", "ffmpeg"]},
+        "shotcraft_categories": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "stage_order": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "next_stage": {"type": "string", "minLength": 1},
+    "status": {"enum": ["ready", "needs_setup", "running", "awaiting_human", "completed", "failed"]},
+    "preview": {
+      "type": "object",
+      "required": ["required_before_batch", "max_duration_seconds", "max_variants", "approval_required_before_paid_batch"],
+      "properties": {
+        "required_before_batch": {"const": true},
+        "max_duration_seconds": {"type": "integer", "minimum": 1, "maximum": 15},
+        "max_variants": {"const": 1},
+        "approval_required_before_paid_batch": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "cost_policy": {
+      "type": "object",
+      "required": ["planning_cost_usd", "budget_ceiling_usd", "media_estimate_status", "first_paid_use_requires_approval"],
+      "properties": {
+        "planning_cost_usd": {"const": 0.0},
+        "budget_ceiling_usd": {"type": "number", "minimum": 0},
+        "media_estimate_status": {"type": "string"},
+        "first_paid_use_requires_approval": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "resume": {
+      "type": "object",
+      "required": ["policy", "input_hash", "preserve_originals"],
+      "properties": {
+        "policy": {"const": "failed_or_stale_only"},
+        "input_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "preserve_originals": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "quality_gates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

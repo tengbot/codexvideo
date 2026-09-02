@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "codexvideo/artifacts/creative_qa_report",
+  "title": "Creative QA Report",
+  "type": "object",
+  "required": ["version", "project_id", "evaluated_at", "checks", "overall_score", "overall_status", "blocking_issues"],
+  "properties": {
+    "version": {"const": "1.0"},
+    "project_id": {"type": "string", "minLength": 1},
+    "evaluated_at": {"type": ["string", "null"], "format": "date-time"},
+    "checks": {
+      "type": "object",
+      "required": ["hook_pain", "consumer_viewpoint", "single_claim", "proof_visible", "visual_copy_match", "pacing", "brand_continuity", "cta", "technical_decode"],
+      "additionalProperties": {"$ref": "#/$defs/check"}
+    },
+    "overall_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "overall_status": {"enum": ["pending", "pass", "fail"]},
+    "blocking_issues": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "required": ["score", "passes", "evidence"],
+      "properties": {
+        "score": {"type": "number", "minimum": 0, "maximum": 1},
+        "passes": {"type": "boolean"},
+        "evidence": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

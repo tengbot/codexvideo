@@ -15,17 +15,7 @@ Skip this skill when the user arrives with a specific, actionable request like "
 Before saying anything creative, know what you're working with:
 
 ```bash
-python -c "
-from tools.tool_registry import registry
-import json
-registry.discover()
-envelope = registry.support_envelope()
-menu = registry.provider_menu()
-print('=== ENVELOPE ===')
-print(json.dumps(envelope, indent=2))
-print('=== MENU ===')
-print(json.dumps(menu, indent=2))
-"
+python -m codexvideo doctor --provider-pack auto
 ```
 
 Parse the output into three buckets:
@@ -40,7 +30,7 @@ Based on discovery, classify the setup:
 
 | Tier | What's Available | Best Pipelines |
 |------|-----------------|----------------|
-| **Zero-key** | Piper TTS + Pexels/Pixabay stock (if keys added) + Remotion and/or HyperFrames + FFmpeg | Animated Explainer (stock visuals + free narration) |
+| **Zero-key** | Supplied media + available local composition, subtitle, analysis, and optional local TTS tools | Product planning, screen demos, supplied-footage edits, and checked-in demos |
 | **Starter** | One configured image generation provider + free TTS + Remotion and/or HyperFrames | Animated Explainer, Animation (AI-generated visuals) |
 | **Standard** | Image gen + TTS + music gen | Animated Explainer, Animation, Screen Demo, Hybrid |
 | **Full** | Video gen + image gen + premium TTS + music | All pipelines including Cinematic, Avatar, Talking Head |
@@ -80,7 +70,7 @@ Present a **short, friendly capability summary**. Do NOT dump the raw provider m
 
 ---
 
-**Welcome to OpenMontage!** I'm your video production agent. Here's what I can do with your current setup:
+**Welcome to CodexVideo!** I'm your video production agent. Here's what I can do with your current setup:
 
 **Ready to go:**
 - [List 2-4 key capabilities in plain language, e.g., "Generate narration with free offline TTS (Piper)", "Create animated videos with spring transitions, captions, and charts (Remotion)", "Stock footage and images from Pexels"]
@@ -103,9 +93,10 @@ Based on the user's tier, present **3 ready-to-use prompts** they can copy right
 
 **Zero-key prompts:**
 
-> **Try this now:** "Make a 45-second animated explainer about why the sky is blue"
+> **Try this now:** "Turn the supplied screenshots and copy into a 20-second product teaser"
 >
-> This will research the topic, write a script, find stock visuals, generate narration with Piper, and compose an animated video with transitions and captions — all free.
+> This plans the hook, uses only supplied assets and available local runtimes,
+> and clearly reports if narration or external media would require an unlock.
 
 > **Also try:** "I have a screen recording of a dashboard workflow — make it a polished product demo with captions and a voiceover" *(Screen Demo pipeline)*
 
@@ -162,7 +153,7 @@ Do NOT explain the full architecture, three-layer knowledge system, or pipeline 
 Common questions and how to respond:
 
 **"What does it cost?"**
-- Zero-key path: $0
+- Zero-key planning, supplied-media editing, and checked-in demos: $0
 - With one paid image/video provider configured: typically $0.30–$1.50 per video depending on asset count
 - Full setup: $1–$3 for most videos
 - Always: "I'll show you exact cost estimates before spending anything."

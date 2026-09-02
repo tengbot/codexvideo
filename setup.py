@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="openmontage",
-    version="0.1.0",
-    description="AI-Orchestrated Video Production Platform",
+    name="codexvideo",
+    version="0.2.0",
+    description="Consumer-led, Codex-native video production system",
     packages=find_packages(),
     python_requires=">=3.10",
     install_requires=[
@@ -19,5 +19,10 @@ setup(
     ],
     extras_require={
         "stt": ["faster-whisper>=1.2,<2"],
+    },
+    entry_points={
+        "console_scripts": [
+            "codexvideo=codexvideo.cli:main",
+        ],
     },
 )

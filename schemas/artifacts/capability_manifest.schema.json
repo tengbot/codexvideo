@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "codexvideo/artifacts/capability_manifest",
+  "title": "Capability Manifest",
+  "type": "object",
+  "required": ["version", "generated_at", "composition_runtimes", "required", "optional", "missing_required", "planning_ready", "selected_provider_pack", "provider_packs", "runtime_warnings"],
+  "properties": {
+    "version": {"const": "1.0"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "composition_runtimes": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "required": {"$ref": "#/$defs/capabilityList"},
+    "optional": {"$ref": "#/$defs/capabilityList"},
+    "missing_required": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "planning_ready": {"type": "boolean"},
+    "selected_provider_pack": {"type": "string", "minLength": 1},
+    "provider_packs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "configured", "env_vars", "unlocks", "note"],
+        "properties": {
+          "id": {"type": "string"},
+          "label": {"type": "string"},
+          "configured": {"type": "boolean"},
+          "env_vars": {"type": "array", "items": {"type": "string"}},
+          "unlocks": {"type": "array", "items": {"type": "string"}},
+          "note": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "runtime_warnings": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "capabilityList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["capability", "configured", "total", "available_providers"],
+        "properties": {
+          "capability": {"type": "string"},
+          "configured": {"type": "integer", "minimum": 0},
+          "total": {"type": "integer", "minimum": 0},
+          "available_providers": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

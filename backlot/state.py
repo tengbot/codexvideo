@@ -229,6 +229,10 @@ def _build_stage_rail(
 # ---------------------------------------------------------------------------
 
 ARTIFACT_FILES = {
+    "consumer_request": "consumer_request.json",
+    "capability_manifest": "capability_manifest.json",
+    "run_plan": "run_plan.json",
+    "creative_qa_report": "creative_qa_report.json",
     "product_truth": "product_truth.json",
     "pain_library": "pain_library.json",
     "value_map": "value_map.json",

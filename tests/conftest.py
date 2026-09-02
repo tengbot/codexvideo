@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import os
 import socket
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -100,6 +101,29 @@ def _block_network():
             raise _blocked(address)
         return _real_create_connection(address, *args, **kwargs)
 
+    # Requests can be routed through a loopback proxy supplied by the host.
+    # In that case the socket guard only sees 127.0.0.1 and the proxy can still
+    # reach a paid provider. Guard the requested URL as well as the final socket.
+    requests_session = None
+    real_requests_request = None
+    try:
+        import requests.sessions
+
+        requests_session = requests.sessions.Session
+        real_requests_request = requests_session.request
+
+        def guarded_requests_request(self, method, url, *args, **kwargs):
+            parsed = urlsplit(str(url))
+            host = parsed.hostname or ""
+            port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            if not _is_loopback((host, port)):
+                raise _blocked((host, port))
+            return real_requests_request(self, method, url, *args, **kwargs)
+
+        requests_session.request = guarded_requests_request
+    except ImportError:
+        pass
+
     socket.socket.connect = guarded_connect
     socket.socket.connect_ex = guarded_connect_ex
     socket.create_connection = guarded_create_connection
@@ -109,6 +133,8 @@ def _block_network():
         socket.socket.connect = _real_connect
         socket.socket.connect_ex = _real_connect_ex
         socket.create_connection = _real_create_connection
+        if requests_session is not None and real_requests_request is not None:
+            requests_session.request = real_requests_request
 
 
 def pytest_configure(config):

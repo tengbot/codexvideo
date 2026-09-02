@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "codexvideo/artifacts/consumer_request",
+  "title": "Consumer Video Request",
+  "type": "object",
+  "required": ["version", "project_id", "created_at", "subject", "intent", "delivery", "creative", "execution"],
+  "properties": {
+    "version": {"const": "1.0"},
+    "project_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "format": "date-time"},
+    "subject": {
+      "type": "object",
+      "required": ["title", "source_url", "prompt"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1},
+        "source_url": {"type": ["string", "null"]},
+        "prompt": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "intent": {
+      "type": "object",
+      "required": ["format", "audience", "consumer_problem", "desired_action"],
+      "properties": {
+        "format": {"enum": ["product-promo", "faceless", "ai-podcast", "avatar", "screen-demo", "clip"]},
+        "audience": {"type": "string", "minLength": 1},
+        "consumer_problem": {"type": "string", "minLength": 1},
+        "desired_action": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "delivery": {
+      "type": "object",
+      "required": ["destination", "aspect", "width", "height", "fps", "language", "duration_seconds"],
+      "properties": {
+        "destination": {"type": "string", "minLength": 1},
+        "aspect": {"enum": ["9:16", "1:1", "16:9"]},
+        "width": {"type": "integer", "minimum": 320},
+        "height": {"type": "integer", "minimum": 320},
+        "fps": {"type": "integer", "minimum": 24, "maximum": 60},
+        "language": {"type": "string", "minLength": 2},
+        "duration_seconds": {"type": "integer", "minimum": 5, "maximum": 600}
+      },
+      "additionalProperties": false
+    },
+    "creative": {
+      "type": "object",
+      "required": ["style_id", "consumer_viewpoint", "hook_policy", "proof_policy", "cta_policy", "rules"],
+      "properties": {
+        "style_id": {"type": "string", "minLength": 1},
+        "consumer_viewpoint": {"const": true},
+        "hook_policy": {"const": "explicit_pain_by_three_seconds"},
+        "proof_policy": {"type": "string", "minLength": 1},
+        "cta_policy": {"const": "one_final_action"},
+        "rules": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "required": ["flow", "storyboard", "preview_first", "budget_usd", "provider_policy", "provider_pack", "variants"],
+      "properties": {
+        "flow": {"enum": ["automation", "companion"]},
+        "storyboard": {"type": "boolean"},
+        "preview_first": {"const": true},
+        "budget_usd": {"type": "number", "minimum": 0},
+        "provider_policy": {"const": "explicit_choice_no_silent_fallback"},
+        "provider_pack": {"type": "string", "minLength": 1},
+        "variants": {"type": "integer", "minimum": 1, "maximum": 100}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

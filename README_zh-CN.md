@@ -7,9 +7,9 @@
 
 <p align="center"><sub><em>Monty the Clapper — OpenMontage 官方吉祥物</em></sub></p>
 
-<h1 align="center">OpenMontage</h1>
+<h1 align="center">CodexVideo</h1>
 
-<p align="center"><strong>首个开源的，代理化（agentic）的视频制作系统</strong></p>
+<p align="center"><strong>为 Codex 构建的消费者视角视频制作系统，基于 OpenMontage</strong></p>
 
 <p align="center">
   <a href="#从您已经喜欢的视频开始">粘贴参考视频</a> &nbsp;·&nbsp;
@@ -116,15 +116,16 @@ OpenMontage 可以从 **YouTube 视频、Short、Reel、TikTok 或本地片段**
 
 - **Python 3.10+** — [python.org](https://www.python.org/downloads/)
 - **FFmpeg** — `brew install ffmpeg` / `sudo apt install ffmpeg` / [ffmpeg.org](https://ffmpeg.org/download.html)
-- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
+- **Node.js 22+** — [nodejs.org](https://nodejs.org/)
 - **一款 AI 编程助手** — Claude Code、Cursor、Copilot、Windsurf 或 Codex
 
 ### 安装与运行
 
 ```bash
-git clone https://github.com/calesthio/OpenMontage.git
-cd OpenMontage
+git clone https://github.com/tengbot/codexvideo.git
+cd codexvideo
 make setup
+codexvideo doctor
 ```
 
 在您的 AI 编程助手中打开该项目，然后告诉它您的需求：

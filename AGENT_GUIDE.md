@@ -1,8 +1,29 @@
-# OpenMontage - Agent Guide
+# CodexVideo - Agent Guide
 
-Start here. This is the complete operating guide and agent contract for OpenMontage.
+Start here. This is the complete operating guide and agent contract for CodexVideo.
 
 For architecture, key files, and conventions see [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
+
+## Consumer Front Door
+
+When a production project already contains `CODEX_TASK.md`, read it plus
+`artifacts/consumer_request.json`, `artifacts/capability_manifest.json`, and
+`artifacts/run_plan.json`, then resume from the first incomplete checkpoint.
+
+For a fresh request that names a URL, subject, footage source, or video form,
+materialize the request before creative work:
+
+```bash
+python -m codexvideo create "<user request>" --url "<optional URL>"
+```
+
+The command performs deterministic routing and persistence only. It never
+chooses claims, providers, models, voices, or final creative direction. After
+creation, follow the generated `CODEX_TASK.md` and the selected pipeline.
+
+Use `python -m codexvideo doctor` for the live capability menu,
+`python -m codexvideo styles` for consumer-facing looks, and
+`python -m codexvideo resume projects/<id>` after an interruption.
 
 ## First Interaction — Onboarding
 
