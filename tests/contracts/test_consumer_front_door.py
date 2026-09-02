@@ -12,6 +12,7 @@ from codexvideo.project import create_project, resume_project
 from schemas.artifacts import ARTIFACT_NAMES, validate_artifact
 from tools.analysis.creative_qa import CreativeQA
 from tools.tool_registry import ToolRegistry
+from styles.playbook_loader import load_playbook
 
 
 def _create(tmp_path: Path, *, prompt: str, format_id: str, project_id: str) -> dict:
@@ -44,6 +45,7 @@ def test_catalog_routes_plain_language_formats_and_styles():
     assert choose_format(requested="auto", prompt="two-host podcast", source_url=None) == "ai-podcast"
     assert choose_format(requested="auto", prompt="", source_url="https://example.com") == "product-promo"
     assert choose_style("product-promo", "auto") == "cinematic-saas"
+    assert load_playbook("clean-professional")["identity"]["name"] == "Clean Professional"
     with pytest.raises(ValueError):
         choose_style("clip", "cinematic-saas")
 
