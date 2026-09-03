@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "codexvideo/artifacts/source_ingest_manifest",
+  "title": "Source Ingest Manifest",
+  "description": "Immutable source identity, audio-track selection, transcript state, and cache evidence for supplied footage.",
+  "type": "object",
+  "required": ["version", "source", "audio", "transcript", "cache", "warnings", "next_action"],
+  "properties": {
+    "version": {"const": "1.0"},
+    "source": {
+      "type": "object",
+      "required": ["id", "path", "sha256", "size_bytes", "mtime_ns", "media"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "mtime_ns": {"type": "integer", "minimum": 0},
+        "media": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "audio": {
+      "type": "object",
+      "required": ["track_count", "tracks", "selected_track", "selected_path", "selection_policy", "silence_threshold_db"],
+      "properties": {
+        "track_count": {"type": "integer", "minimum": 0},
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["track", "stream_index", "codec", "channels", "sample_rate", "peak_dbfs", "status"],
+            "properties": {
+              "track": {"type": "integer", "minimum": 0},
+              "stream_index": {"type": "integer", "minimum": 0},
+              "codec": {"type": "string"},
+              "channels": {"type": "integer", "minimum": 0},
+              "sample_rate": {"type": "integer", "minimum": 0},
+              "language": {"type": ["string", "null"]},
+              "title": {"type": ["string", "null"]},
+              "peak_dbfs": {"type": ["number", "null"]},
+              "status": {"enum": ["usable", "silent", "not_measured"]}
+            },
+            "additionalProperties": false
+          }
+        },
+        "selected_track": {"type": ["integer", "null"], "minimum": 0},
+        "selected_path": {"type": ["string", "null"]},
+        "selection_policy": {"enum": ["none", "explicit", "only_track", "loudest_non_silent"]},
+        "silence_threshold_db": {"type": "number", "minimum": -120, "maximum": 0}
+      },
+      "additionalProperties": false
+    },
+    "transcript": {
+      "type": "object",
+      "required": ["status", "language", "input_path", "artifact_path", "packed_path", "timing_quality"],
+      "properties": {
+        "status": {"enum": ["missing", "imported"]},
+        "language": {"type": "string", "minLength": 2},
+        "input_path": {"type": ["string", "null"]},
+        "artifact_path": {"type": ["string", "null"]},
+        "packed_path": {"type": ["string", "null"]},
+        "timing_quality": {"type": ["string", "null"]},
+        "input_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "cache": {
+      "type": "object",
+      "required": ["status", "key", "directory"],
+      "properties": {
+        "status": {"enum": ["hit", "miss"]},
+        "key": {"type": "string", "minLength": 1},
+        "directory": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "next_action": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

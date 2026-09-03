@@ -9,7 +9,9 @@ import pytest
 
 from schemas.artifacts import validate_artifact
 from tools.editing.raw_footage.grade import RawFootageGrade
-from tools.editing.raw_footage.models import load_transcript, resolve_safe_path
+from tools.editing.raw_footage import models as raw_models
+from tools.editing.raw_footage import render as raw_render
+from tools.editing.raw_footage.models import load_transcript, parse_frame_rate, resolve_safe_path
 from tools.editing.raw_footage.qa import CutBoundaryQA, TimelineView
 from tools.editing.raw_footage.render import RawEditRender
 from tools.editing.raw_footage.transcript import RawTranscript
@@ -71,6 +73,34 @@ def _make_color_video(path: Path, color: str, size: str, duration: float, *, aud
     subprocess.run(command, check=True)
 
 
+def _make_fractional_fps_video(path: Path, duration: float = 0.8) -> None:
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            f"testsrc2=size=160x90:rate=24000/1001:duration={duration}",
+            "-f",
+            "lavfi",
+            "-i",
+            f"sine=frequency=440:sample_rate=48000:duration={duration}",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(path),
+        ],
+        check=True,
+    )
+
+
 def test_registry_discovers_native_raw_footage_tools():
     registry = ToolRegistry()
     discovered = set(registry.discover("tools"))
@@ -88,8 +118,74 @@ def test_ported_source_has_pinned_commit_and_mit_license():
     license_text = Path(
         "tools/editing/raw_footage/THIRD_PARTY_LICENSES/video-use-MIT.txt"
     ).read_text(encoding="utf-8")
-    assert "92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66" in module
+    assert "9575612f066aa517354790a645fd90f9f95a743b" in module
     assert "Copyright (c) 2026 Browser Use" in license_text
+
+
+def test_probe_prefers_average_fps_and_applies_display_rotation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    source = tmp_path / "rotated.mp4"
+    source.write_bytes(b"fixture")
+    payload = {
+        "streams": [
+            {
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 1920,
+                "height": 1080,
+                "avg_frame_rate": "30000/1001",
+                "r_frame_rate": "30/1",
+                "side_data_list": [{"rotation": -90}],
+            },
+            {"codec_type": "audio", "codec_name": "aac"},
+        ],
+        "format": {"duration": "2.0", "size": "7"},
+    }
+
+    class ProbeResult:
+        stdout = json.dumps(payload)
+
+    monkeypatch.setattr(raw_models, "run_command", lambda *_args, **_kwargs: ProbeResult())
+    info = raw_models.probe_media(source)
+
+    assert info["fps_rate"] == "30000/1001"
+    assert info["fps"] == pytest.approx(29.97003, rel=1e-5)
+    assert (info["coded_width"], info["coded_height"]) == (1920, 1080)
+    assert (info["width"], info["height"]) == (1080, 1920)
+    assert info["rotation"] == 270
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(30, "30/1"), (29.97, "2997/100"), ("30000/1001", "30000/1001")],
+)
+def test_parse_frame_rate_preserves_exact_rationals(value, expected):
+    assert parse_frame_rate(value) == expected
+
+
+@pytest.mark.parametrize("value", [0, -1, "0/0", "abc", "1/0"])
+def test_parse_frame_rate_rejects_invalid_values(value):
+    with pytest.raises(ValueError, match="fps"):
+        parse_frame_rate(value)
+
+
+def test_subtitle_style_uses_system_fallback_unless_font_is_explicit():
+    fallback = RawEditRender._subtitle_force_style({}, 1280)
+    explicit = RawEditRender._subtitle_force_style({"font": "Inter"}, 1280)
+    assert "FontName=" not in fallback
+    assert "FontName=Inter" in explicit
+
+
+def test_subtitle_preflight_explains_missing_libass(monkeypatch: pytest.MonkeyPatch):
+    class FilterResult:
+        returncode = 0
+        stdout = " T.. scale V->V Scale the input video"
+        stderr = ""
+
+    monkeypatch.setattr(raw_render, "run_command", lambda *_args, **_kwargs: FilterResult())
+    with pytest.raises(RuntimeError, match="libass subtitles filter"):
+        RawEditRender._require_subtitles_filter()
 
 
 def test_srt_import_is_monotonic_and_packable(tmp_path: Path):
@@ -158,7 +254,7 @@ def test_ported_auto_grade_returns_bounded_filter(tmp_path: Path):
         }
     )
     assert result.success, result.error
-    assert result.data["source_commit"].startswith("92c2b34e")
+    assert result.data["source_commit"].startswith("9575612f")
     assert result.data["filter"].startswith("eq=")
     assert {"y_mean", "y_std", "sat_mean"} <= result.data["stats"].keys()
 
@@ -268,6 +364,62 @@ def test_render_and_boundary_qa_end_to_end(tmp_path: Path):
     assert qa_report["technical"]["decode_ok"] is True
     assert len(qa_report["boundaries"]) == 1
     assert Path(qa_report["boundaries"][0]["timeline_view_path"]).is_file()
+    assert qa_report["metadata"]["attempt"] == 1
+    assert Path(qa.data["history_path"]).is_file()
+
+
+def test_cut_boundary_qa_caps_attempts_at_three(tmp_path: Path):
+    result = CutBoundaryQA().execute(
+        {
+            "video_path": str(tmp_path / "missing.mp4"),
+            "edit_decisions_path": str(tmp_path / "missing.json"),
+            "project_dir": str(tmp_path),
+            "attempt": 4,
+        }
+    )
+    assert not result.success
+    assert "attempt must be between 1 and 3" in result.error
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="FFmpeg not installed")
+def test_render_preserves_fractional_source_fps_by_default(tmp_path: Path):
+    source = tmp_path / "source-23976.mp4"
+    _make_fractional_fps_video(source)
+    project = tmp_path / "project"
+    edit_path = project / "artifacts" / "edit_decisions.json"
+    edit = {
+        "version": "1.0",
+        "cuts": [
+            {
+                "id": "fractional",
+                "source": str(source),
+                "in_seconds": 0.0,
+                "out_seconds": 0.7,
+            }
+        ],
+        "render_runtime": "ffmpeg",
+    }
+    validate_artifact("edit_decisions", edit)
+    _write_json(edit_path, edit)
+    output = project / "renders" / "fractional.mp4"
+
+    result = RawEditRender().execute(
+        {
+            "edit_decisions_path": str(edit_path),
+            "output_path": str(output),
+            "project_dir": str(project),
+            "allowed_roots": [str(tmp_path)],
+            "width": 160,
+            "height": 90,
+            "threads": 1,
+        }
+    )
+
+    assert result.success, result.error
+    report = json.loads(Path(result.data["render_report_path"]).read_text())
+    assert report["metadata"]["fps_policy"] == "preserve_first_source"
+    assert report["metadata"]["render_fps_rate"] == "24000/1001"
+    assert report["outputs"][0]["fps"] == pytest.approx(23.976, rel=1e-3)
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg"), reason="FFmpeg not installed")

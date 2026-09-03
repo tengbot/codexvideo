@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import tempfile
 import time
@@ -25,6 +26,7 @@ from tools.base_tool import (
 from .models import (
     group_subtitle_cues,
     load_transcript,
+    parse_frame_rate,
     probe_media,
     read_json,
     resolve_safe_path,
@@ -38,7 +40,7 @@ from .ported_video_use import auto_grade_for_clip, get_preset, measure_loudness
 
 class RawEditRender(BaseTool):
     name = "raw_edit_render"
-    version = "1.0.0"
+    version = "1.1.0"
     tier = ToolTier.CORE
     stability = ToolStability.BETA
     determinism = Determinism.DETERMINISTIC
@@ -56,6 +58,10 @@ class RawEditRender(BaseTool):
         "subtitle_final_pass",
         "two_pass_loudness_normalization",
         "cut_boundary_padding_validation",
+        "source_fps_preservation",
+        "rotation_aware_media_probe",
+        "subtitle_runtime_preflight",
+        "font_fallback_safe_subtitles",
     ]
     best_for = [
         "Rendering reviewed source ranges without changing original media",
@@ -78,7 +84,12 @@ class RawEditRender(BaseTool):
             "enforce_word_boundaries": {"type": "boolean"},
             "width": {"type": "integer", "minimum": 64},
             "height": {"type": "integer", "minimum": 64},
-            "fps": {"type": "number", "minimum": 1},
+            "fps": {
+                "oneOf": [
+                    {"type": "number", "exclusiveMinimum": 0},
+                    {"type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+)?$|^[0-9]+/[0-9]+$"},
+                ]
+            },
             "threads": {"type": "integer", "minimum": 1},
         },
     }
@@ -114,7 +125,6 @@ class RawEditRender(BaseTool):
 
         width = int(inputs.get("width") or 720)
         height = int(inputs.get("height") or 1280)
-        fps = float(inputs.get("fps") or 30)
         threads = min(4, int(inputs.get("threads") or 2))
         grade_mode = str(inputs.get("grade") or "none")
         quality = str(inputs.get("quality") or "final")
@@ -122,12 +132,23 @@ class RawEditRender(BaseTool):
         output_path = Path(inputs["output_path"]).expanduser().resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         allowed_roots = [Path(value) for value in inputs.get("allowed_roots", [str(project_dir)])]
+        first_source = resolve_safe_path(
+            cuts[0]["source"], base=edit_path.parent, allowed_roots=allowed_roots
+        )
+        first_source_info = probe_media(first_source)
+        requested_fps = inputs.get("fps")
+        fps = (
+            parse_frame_rate(requested_fps)
+            if requested_fps is not None
+            else str(first_source_info.get("fps_rate") or "30/1")
+        )
         transcripts = self._load_transcripts(inputs.get("transcript_paths") or {})
         overlay_paths = inputs.get("overlay_paths") or {}
         master_srt = project_dir / "artifacts" / "master_subtitles.srt"
         output_transcript_path = project_dir / "artifacts" / "output_transcript.json"
         boundary_warnings: list[str] = []
         grade_analyses: list[dict[str, Any]] = []
+        source_fps_rates: dict[str, str] = {}
 
         with tempfile.TemporaryDirectory(prefix="raw-edit-", dir=project_dir) as temp_value:
             temp_dir = Path(temp_value)
@@ -140,6 +161,7 @@ class RawEditRender(BaseTool):
                     cut["source"], base=edit_path.parent, allowed_roots=allowed_roots
                 )
                 source_info = probe_media(source)
+                source_fps_rates[str(source)] = str(source_info.get("fps_rate") or "unknown")
                 source_in = float(cut["in_seconds"])
                 source_out = float(cut["out_seconds"])
                 speed = float(cut.get("speed") or 1.0)
@@ -276,6 +298,7 @@ class RawEditRender(BaseTool):
                 "Shifted overlay PTS to output windows before applying subtitles",
                 "Applied two-pass EBU R128 loudness normalization when measurement succeeded",
                 "Original source media was not modified",
+                "Preserved the first source frame rate unless an explicit fps override was provided",
             ],
             "metadata": {
                 "edit_decisions": str(edit_path),
@@ -286,7 +309,10 @@ class RawEditRender(BaseTool):
                 "grade_analyses": grade_analyses,
                 "quality": quality,
                 "overlay_count": len(edit.get("overlays") or []),
-                "ported_video_use_commit": "92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66",
+                "ported_video_use_commit": "9575612f066aa517354790a645fd90f9f95a743b",
+                "fps_policy": "explicit" if requested_fps is not None else "preserve_first_source",
+                "render_fps_rate": fps,
+                "source_fps_rates": source_fps_rates,
                 "offline": True,
                 "threads": threads,
             },
@@ -464,7 +490,7 @@ class RawEditRender(BaseTool):
         speed: float,
         width: int,
         height: int,
-        fps: float,
+        fps: str,
         threads: int,
         has_audio: bool,
         is_hdr: bool,
@@ -489,7 +515,7 @@ class RawEditRender(BaseTool):
         grade_chain = f",{grade_filter}" if grade_filter else ""
         video_filter = (
             f"trim=start={source_in:.6f}:duration={source_duration:.6f},setpts=PTS-STARTPTS,"
-            f"setpts=PTS/{speed:.6f},{scale}{grade_chain},fps={fps:.6f},format=yuv420p"
+            f"setpts=PTS/{speed:.6f},{scale}{grade_chain},fps={fps},format=yuv420p"
         )
         fade = min(0.03, output_duration / 3)
         audio_input = "[0:a:0]" if has_audio else "[1:a:0]"
@@ -613,23 +639,14 @@ class RawEditRender(BaseTool):
             current = output_label
 
         if subtitle_path:
+            RawEditRender._require_subtitles_filter()
             escaped = (
                 str(subtitle_path)
                 .replace("\\", "\\\\")
                 .replace(":", "\\:")
                 .replace("'", "\\'")
             )
-            position = subtitle_settings.get("position") or "bottom-center"
-            alignment = {"top-center": 8, "center": 5, "bottom-center": 2}.get(position, 2)
-            margin_v = 90 if height >= 1000 else 36
-            font_size = int(
-                subtitle_settings.get("font_size") or (28 if height >= 1000 else 22)
-            )
-            force_style = (
-                f"FontName={subtitle_settings.get('font') or 'Arial'},FontSize={font_size},"
-                "PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,"
-                f"BorderStyle=1,Outline=3,Shadow=0,Alignment={alignment},MarginV={margin_v}"
-            )
+            force_style = RawEditRender._subtitle_force_style(subtitle_settings, height)
             filter_parts.append(
                 f"{current}subtitles=filename='{escaped}':force_style='{force_style}'[outv]"
             )
@@ -663,6 +680,43 @@ class RawEditRender(BaseTool):
             ]
         )
         run_command(command)
+
+    @staticmethod
+    def _require_subtitles_filter() -> None:
+        result = run_command(
+            ["ffmpeg", "-hide_banner", "-filters"],
+            check=False,
+        )
+        output = f"{result.stdout}\n{result.stderr}"
+        if result.returncode != 0 or not re.search(r"^\s*\S+\s+subtitles\s", output, re.MULTILINE):
+            raise RuntimeError(
+                "This FFmpeg build does not provide the libass subtitles filter. "
+                "Install an FFmpeg build with libass or use a Remotion caption route "
+                "before starting the final render."
+            )
+
+    @staticmethod
+    def _subtitle_force_style(settings: dict[str, Any], height: int) -> str:
+        position = settings.get("position") or "bottom-center"
+        alignment = {"top-center": 8, "center": 5, "bottom-center": 2}.get(position, 2)
+        margin_v = 90 if height >= 1000 else 36
+        font_size = int(settings.get("font_size") or (28 if height >= 1000 else 22))
+        style = []
+        if settings.get("font"):
+            style.append(f"FontName={settings['font']}")
+        style.extend(
+            [
+                f"FontSize={font_size}",
+                "PrimaryColour=&H00FFFFFF",
+                "OutlineColour=&H00101010",
+                "BorderStyle=1",
+                "Outline=3",
+                "Shadow=0",
+                f"Alignment={alignment}",
+                f"MarginV={margin_v}",
+            ]
+        )
+        return ",".join(style)
 
     @staticmethod
     def _normalise_loudness(source: Path, output: Path, *, threads: int) -> None:

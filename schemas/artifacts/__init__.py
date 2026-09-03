@@ -53,6 +53,7 @@ ARTIFACT_NAMES = [
     "cost_log",
     "decision_log",
     "source_media_review",
+    "source_ingest_manifest",
     "final_review",
     "character_qa_report",
     "video_analysis_brief",

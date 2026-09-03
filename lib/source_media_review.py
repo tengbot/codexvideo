@@ -38,7 +38,13 @@ def detect_media_type(path: Path) -> Optional[str]:
     return None
 
 
-def _probe_video(path: Path, tool_registry: Any) -> dict[str, Any]:
+def _probe_video(
+    path: Path,
+    tool_registry: Any,
+    *,
+    review_output_dir: Path | None = None,
+    sample_frames: bool = True,
+) -> dict[str, Any]:
     """Probe a video file using audio_probe (ffprobe wrapper) and frame_sampler."""
     result: dict[str, Any] = {"technical_probe": {}, "representative_frames": [], "quality_risks": []}
 
@@ -85,13 +91,14 @@ def _probe_video(path: Path, tool_registry: Any) -> dict[str, Any]:
     # Sample frames
     try:
         frame_sampler = tool_registry.get("frame_sampler")
-        if frame_sampler:
+        if frame_sampler and sample_frames:
             duration = result["technical_probe"].get("duration_seconds", 0)
             timestamps = _sample_timestamps(duration, count=4)
+            output_dir = review_output_dir or path.parent / ".source_review_frames"
             sample_result = frame_sampler.execute({
                 "input_path": str(path),
                 "timestamps": timestamps,
-                "output_dir": str(path.parent / ".source_review_frames"),
+                "output_dir": str(output_dir),
             })
             if sample_result.success:
                 result["representative_frames"] = sample_result.data.get("frame_paths", [])
@@ -199,7 +206,11 @@ def _transcribe_if_available(
         if transcriber and transcriber.get_status().value == "available":
             result = transcriber.execute({"input_path": str(path)})
             if result.success:
-                text = result.data.get("text", "")
+                text = result.data.get("text", "") or " ".join(
+                    str(segment.get("text") or "").strip()
+                    for segment in result.data.get("segments", [])
+                    if str(segment.get("text") or "").strip()
+                )
                 if text:
                     # Return summary, not full transcript
                     words = text.split()
@@ -259,7 +270,18 @@ def review_source_media(
 
         # Probe based on media type
         if media_type == "video":
-            probe_data = _probe_video(file_path, tool_registry)
+            project_dir = Path(context["project_dir"]) if context.get("project_dir") else None
+            review_output_dir = (
+                project_dir / "review" / "source-media" / file_path.stem
+                if project_dir
+                else None
+            )
+            probe_data = _probe_video(
+                file_path,
+                tool_registry,
+                review_output_dir=review_output_dir,
+                sample_frames=bool(context.get("sample_frames", True)),
+            )
         elif media_type == "audio":
             probe_data = _probe_audio(file_path, tool_registry)
         else:
@@ -270,7 +292,11 @@ def review_source_media(
         entry["representative_frames"] = probe_data.get("representative_frames", [])
 
         # Attempt transcription for audio/video
-        transcript = _transcribe_if_available(file_path, media_type, tool_registry)
+        transcript = (
+            _transcribe_if_available(file_path, media_type, tool_registry)
+            if context.get("transcribe", False)
+            else None
+        )
         if transcript:
             entry["transcript_summary"] = transcript
 

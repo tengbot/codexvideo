@@ -25,6 +25,7 @@ required_skills:
   - pipelines/talking-head/publish-director
   - meta/reviewer
   - meta/checkpoint-protocol
+  - core/raw-footage-editing
 
 orchestration:
   mode: executive-producer
@@ -42,6 +43,10 @@ compatible_playbooks:
 stages:
   - name: idea
     skill: pipelines/talking-head/idea-director
+    optional_artifacts_in:
+      - source_media_review
+      - source_ingest_manifest
+      - source_transcript
     produces:
       - brief
       - decision_log
@@ -62,13 +67,20 @@ stages:
       - brief
     optional_artifacts_in:
       - source_media_review
+      - source_ingest_manifest
+      - source_transcript
     produces:
       - script
-    required_tools:
-      - transcriber      # speech-to-text
-    optional_tools: []
+    optional_tools:
+      - transcriber      # required only when no approved transcript exists
+      - raw_footage_ingest
+      - raw_transcript
+      - timeline_view
     tools_available:
       - transcriber
+      - raw_footage_ingest
+      - raw_transcript
+      - timeline_view
     checkpoint_required: true
     human_approval_default: true
     review_focus:
@@ -78,6 +90,7 @@ stages:
     success_criteria:
       - Schema-valid script artifact
       - Script sections have valid timestamps from transcript data
+      - Transcript comes from approved timing data or an explicitly selected transcriber
 
   - name: scene_plan
     skill: pipelines/talking-head/scene-director
@@ -92,10 +105,12 @@ stages:
       - frame_sampler    # representative frame extraction
       - face_tracker     # face position analysis for reframing decisions
       - silence_cutter   # silence detection for jump cut planning
+      - timeline_view    # filmstrip + waveform + transcript review
     tools_available:
       - frame_sampler
       - face_tracker
       - silence_cutter
+      - timeline_view
     checkpoint_required: true
     human_approval_default: true
     review_focus:
@@ -142,12 +157,15 @@ stages:
       - script
     produces:
       - edit_decisions
+      - editable_timeline
     optional_tools:
       - silence_cutter   # auto jump cuts on silent segments
       - video_trimmer    # speed control (0.5x–2x), cut, concat
+      - editable_timeline
     tools_available:
       - silence_cutter
       - video_trimmer
+      - editable_timeline
     checkpoint_required: true
     human_approval_default: false
     review_focus:
@@ -169,6 +187,7 @@ stages:
     produces:
       - render_report
       - final_review
+      - cut_qa_report
     required_tools:
       - video_compose    # rendering
       - audio_mixer      # audio layering + segmented music
@@ -185,6 +204,9 @@ stages:
       - showcase_card    # letterboxed showcase cards with typography
       - video_stitch     # multi-clip assembly with transitions
       - visual_qa        # frame extraction + quality validation
+      - raw_footage_grade
+      - raw_edit_render
+      - cut_boundary_qa
     tools_available:
       - video_compose
       - audio_mixer
@@ -200,14 +222,19 @@ stages:
       - showcase_card
       - video_stitch
       - visual_qa
+      - raw_footage_grade
+      - raw_edit_render
+      - cut_boundary_qa
     checkpoint_required: true
     human_approval_default: false
     review_focus:
       - Output video exists and is playable
       - Subtitles are synced with speech
       - Audio is clear with balanced levels
+      - Every raw-footage boundary has durable QA evidence
     success_criteria:
       - Schema-valid render_report artifact
+      - Raw-footage outputs have a passing cut_qa_report
       - Output video file exists and is playable
 
   - name: publish

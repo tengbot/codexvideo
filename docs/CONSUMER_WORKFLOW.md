@@ -40,6 +40,21 @@ interrupted run, use:
 codexvideo resume projects/<id>
 ```
 
+For supplied footage, audio, or screen recordings:
+
+```bash
+codexvideo create --media /path/to/source.mp4 \
+  --transcript /path/to/source.srt \
+  --audio-track auto \
+  --language en
+```
+
+Video and audio automatically route to footage repurposing unless the prompt
+selects a more specific compatible format. Images remain reference assets and
+do not force the clip pipeline. Project creation performs local media review
+and resumable ingest; ASR remains an explicit provider choice. Rendered source
+edits must pass strict cut-boundary QA, with at most three recorded attempts.
+
 ## Formats
 
 | Consumer choice | Pipeline | Default style |

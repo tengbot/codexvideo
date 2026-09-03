@@ -6,7 +6,7 @@ Source files:
   helpers/timeline_view.py
   helpers/render.py
 
-Source commit: 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66
+Source commit: 9575612f066aa517354790a645fd90f9f95a743b
 Copyright (c) 2026 Browser Use
 
 OpenMontage adaptations are limited to canonical ``*_seconds`` timing fields,

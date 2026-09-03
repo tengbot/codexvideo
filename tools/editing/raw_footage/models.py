@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from fractions import Fraction
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -46,6 +48,70 @@ def resolve_safe_path(value: str, *, base: Path, allowed_roots: Iterable[Path]) 
     return candidate
 
 
+def parse_frame_rate(value: str | int | float) -> str:
+    """Return an exact, FFmpeg-safe positive rational frame rate."""
+    text = str(value).strip()
+    if len(text) > 32 or not re.fullmatch(
+        r"(?:[0-9]+(?:\.[0-9]+)?|[0-9]+/[0-9]+)", text
+    ):
+        raise ValueError("fps must be a positive number or rational such as 30 or 30000/1001")
+    try:
+        rate = Fraction(text)
+    except (ValueError, ZeroDivisionError) as exc:
+        raise ValueError(
+            "fps must be a positive number or rational such as 30 or 30000/1001"
+        ) from exc
+    if rate <= 0:
+        raise ValueError("fps must be greater than zero")
+    max_component = 2_147_483_647
+    if rate.numerator > max_component or rate.denominator > max_component:
+        raise ValueError("fps precision or magnitude is too large")
+    return f"{rate.numerator}/{rate.denominator}"
+
+
+def file_sha256(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
+    """Hash a local source without loading the complete file into memory."""
+    digest = sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def probe_audio_streams(path: Path) -> list[dict[str, Any]]:
+    """Return audio streams using zero-based audio ordinals for FFmpeg mapping."""
+    result = run_command(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "a",
+            "-show_entries",
+            "stream=index,codec_name,channels,sample_rate:stream_tags=language,title",
+            "-of",
+            "json",
+            str(path),
+        ]
+    )
+    payload = json.loads(result.stdout)
+    streams: list[dict[str, Any]] = []
+    for track, stream in enumerate(payload.get("streams") or []):
+        tags = stream.get("tags") or {}
+        streams.append(
+            {
+                "track": track,
+                "stream_index": int(stream.get("index") or 0),
+                "codec": str(stream.get("codec_name") or ""),
+                "channels": int(stream.get("channels") or 0),
+                "sample_rate": int(stream.get("sample_rate") or 0),
+                "language": tags.get("language"),
+                "title": tags.get("title"),
+            }
+        )
+    return streams
+
+
 def probe_media(path: Path) -> dict[str, Any]:
     result = run_command(
         [
@@ -53,7 +119,7 @@ def probe_media(path: Path) -> dict[str, Any]:
             "-v",
             "error",
             "-show_entries",
-            "format=duration,size:stream=index,codec_type,codec_name,width,height,pix_fmt,r_frame_rate,color_transfer,color_primaries,color_space",
+            "format=duration,size:stream=index,codec_type,codec_name,width,height,pix_fmt,avg_frame_rate,r_frame_rate,color_transfer,color_primaries,color_space:stream_side_data=rotation",
             "-of",
             "json",
             str(path),
@@ -63,19 +129,42 @@ def probe_media(path: Path) -> dict[str, Any]:
     streams = payload.get("streams") or []
     video = next((item for item in streams if item.get("codec_type") == "video"), {})
     audio = next((item for item in streams if item.get("codec_type") == "audio"), None)
-    rate = str(video.get("r_frame_rate") or "0/1")
-    try:
-        numerator, denominator = rate.split("/", 1)
-        fps = float(numerator) / float(denominator)
-    except (ValueError, ZeroDivisionError):
-        fps = 0.0
+    fps_rate = ""
+    for field in ("avg_frame_rate", "r_frame_rate"):
+        candidate = str(video.get(field) or "")
+        if not candidate or candidate == "0/0":
+            continue
+        try:
+            fps_rate = parse_frame_rate(candidate)
+            break
+        except ValueError:
+            continue
+    fps = float(Fraction(fps_rate)) if fps_rate else 0.0
+    coded_width = int(video.get("width") or 0)
+    coded_height = int(video.get("height") or 0)
+    rotation = 0
+    for side_data in video.get("side_data_list") or []:
+        if side_data.get("rotation") is None:
+            continue
+        try:
+            rotation = int(round(float(side_data["rotation"]))) % 360
+        except (TypeError, ValueError, OverflowError):
+            rotation = 0
+        break
+    width, height = coded_width, coded_height
+    if rotation in {90, 270}:
+        width, height = height, width
     format_data = payload.get("format") or {}
     return {
         "duration_seconds": float(format_data.get("duration") or 0),
         "size_bytes": int(format_data.get("size") or path.stat().st_size),
-        "width": int(video.get("width") or 0),
-        "height": int(video.get("height") or 0),
+        "width": width,
+        "height": height,
+        "coded_width": coded_width,
+        "coded_height": coded_height,
+        "rotation": rotation,
         "fps": fps,
+        "fps_rate": fps_rate,
         "codec": str(video.get("codec_name") or ""),
         "pixel_format": str(video.get("pix_fmt") or ""),
         "has_audio": audio is not None,

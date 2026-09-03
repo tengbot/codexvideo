@@ -34,6 +34,7 @@ required_skills:
   - pipelines/avatar-spokesperson/publish-director
   - meta/reviewer
   - meta/checkpoint-protocol
+  - core/raw-footage-editing
 
 compatible_playbooks:
   recommended:
@@ -45,6 +46,10 @@ compatible_playbooks:
 stages:
   - name: idea
     skill: pipelines/avatar-spokesperson/idea-director
+    optional_artifacts_in:
+      - source_media_review
+      - source_ingest_manifest
+      - source_transcript
     produces:
       - brief
       - decision_log
@@ -63,12 +68,20 @@ stages:
     skill: pipelines/avatar-spokesperson/script-director
     required_artifacts_in:
       - brief
+    optional_artifacts_in:
+      - source_media_review
+      - source_ingest_manifest
+      - source_transcript
     produces:
       - script
     optional_tools:
       - transcriber
+      - raw_footage_ingest
+      - raw_transcript
     tools_available:
       - transcriber
+      - raw_footage_ingest
+      - raw_transcript
     checkpoint_required: true
     human_approval_default: true
     review_focus:
@@ -142,7 +155,11 @@ stages:
       - script
     produces:
       - edit_decisions
-    tools_available: []
+      - editable_timeline
+    optional_tools:
+      - editable_timeline
+    tools_available:
+      - editable_timeline
     checkpoint_required: true
     human_approval_default: false
     review_focus:
@@ -169,20 +186,28 @@ stages:
     optional_tools:
       - video_stitch
       - audio_enhance
+      - raw_footage_grade
+      - raw_edit_render
+      - cut_boundary_qa
     tools_available:
       - video_compose
       - audio_mixer
       - video_stitch
       - audio_enhance
+      - raw_footage_grade
+      - raw_edit_render
+      - cut_boundary_qa
     checkpoint_required: true
     human_approval_default: false
     review_focus:
       - Lip sync or mouth timing is acceptable for the chosen path
       - Subtitle placement and framing remain clean
       - Audio is clear and presenter-focused
+      - Every edited avatar boundary has durable QA evidence
     success_criteria:
       - Schema-valid render_report artifact
       - Output file exists and passes ffprobe validation
+      - Edited supplied-avatar footage has a passing cut_qa_report; generated-only outputs do not require one
 
   - name: publish
     skill: pipelines/avatar-spokesperson/publish-director

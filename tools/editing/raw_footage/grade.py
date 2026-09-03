@@ -81,7 +81,7 @@ class RawFootageGrade(BaseTool):
                         "stats": stats,
                         "mode": mode,
                         "available_presets": sorted(PRESETS),
-                        "source_commit": "92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66",
+                        "source_commit": "9575612f066aa517354790a645fd90f9f95a743b",
                     },
                 )
             output = Path(inputs["output_path"]).expanduser().resolve()

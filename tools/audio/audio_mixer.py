@@ -3,12 +3,20 @@
 Mixes speech, music, and SFX tracks with support for ducking, fades,
 and volume normalization. Falls back to FFmpeg-only mode if pydub is
 not installed.
+
+The selected-track extraction and silent-track guard adapt behavior from
+browser-use/video-use commit 9575612f under its preserved MIT license at
+tools/editing/raw_footage/THIRD_PARTY_LICENSES/video-use-MIT.txt.
 """
 
 from __future__ import annotations
 
+import math
 import time
+import wave
+from array import array
 from pathlib import Path
+from sys import byteorder
 from typing import Any
 
 from tools.base_tool import (
@@ -25,7 +33,7 @@ from tools.base_tool import (
 
 class AudioMixer(BaseTool):
     name = "audio_mixer"
-    version = "0.1.0"
+    version = "0.2.0"
     tier = ToolTier.CORE
     capability = "audio_processing"
     provider = "ffmpeg"
@@ -33,14 +41,23 @@ class AudioMixer(BaseTool):
     execution_mode = ExecutionMode.SYNC
     determinism = Determinism.DETERMINISTIC
 
-    dependencies = ["cmd:ffmpeg"]
+    dependencies = ["cmd:ffmpeg", "cmd:ffprobe"]
     install_instructions = (
         "FFmpeg is required. pydub is optional for advanced mixing:\n"
         "pip install pydub"
     )
     agent_skills = ["ffmpeg", "video-toolkit"]
 
-    capabilities = ["mix", "duck", "fade", "normalize", "extract_audio", "segmented_music"]
+    capabilities = [
+        "mix",
+        "duck",
+        "fade",
+        "normalize",
+        "extract_audio",
+        "audio_track_selection",
+        "silent_track_guard",
+        "segmented_music",
+    ]
 
     input_schema = {
         "type": "object",
@@ -114,6 +131,24 @@ class AudioMixer(BaseTool):
                 "default": -12,
             },
             "input_path": {"type": "string", "description": "Input for extract operation"},
+            "audio_track": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 0,
+                "description": "Zero-based audio stream to extract from a multi-track video.",
+            },
+            "reject_silence": {
+                "type": "boolean",
+                "default": True,
+                "description": "Reject an extracted track whose peak is effectively silent.",
+            },
+            "silence_threshold_db": {
+                "type": "number",
+                "minimum": -120,
+                "maximum": 0,
+                "default": -60,
+                "description": "Peak dBFS threshold used by reject_silence.",
+            },
             "output_path": {"type": "string"},
             "ducking": {
                 "type": "object",
@@ -196,7 +231,14 @@ class AudioMixer(BaseTool):
     }
 
     resource_profile = ResourceProfile(cpu_cores=2, ram_mb=1024, vram_mb=0, disk_mb=500)
-    idempotency_key_fields = ["operation", "tracks", "ducking"]
+    idempotency_key_fields = [
+        "operation",
+        "tracks",
+        "ducking",
+        "input_path",
+        "audio_track",
+        "silence_threshold_db",
+    ]
     side_effects = ["writes mixed audio file to output_path"]
     user_visible_verification = [
         "Listen to mixed output and verify speech clarity and music ducking",
@@ -445,18 +487,54 @@ class AudioMixer(BaseTool):
         )
 
     def _extract(self, inputs: dict[str, Any]) -> ToolResult:
-        """Extract audio from a video file."""
+        """Extract one selected audio stream and reject silent results early."""
         input_path = Path(inputs["input_path"])
         if not input_path.exists():
             return ToolResult(success=False, error=f"Input not found: {input_path}")
 
-        output_path = Path(
-            inputs.get("output_path", str(input_path.with_suffix(".wav")))
+        audio_track = int(inputs.get("audio_track", 0))
+        if audio_track < 0:
+            return ToolResult(success=False, error="audio_track must be zero or greater")
+        probe = self.run_command(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "a",
+                "-show_entries",
+                "stream=index",
+                "-of",
+                "csv=p=0",
+                str(input_path),
+            ]
         )
+        audio_track_count = len([line for line in probe.stdout.splitlines() if line.strip()])
+        if not audio_track_count:
+            return ToolResult(success=False, error=f"Input has no audio tracks: {input_path}")
+        if audio_track >= audio_track_count:
+            return ToolResult(
+                success=False,
+                error=(
+                    f"audio_track {audio_track} is unavailable; {input_path.name} has "
+                    f"{audio_track_count} audio track(s), numbered 0-{audio_track_count - 1}"
+                ),
+            )
+
+        default_output = (
+            input_path.with_suffix(".wav")
+            if audio_track == 0
+            else input_path.with_name(f"{input_path.stem}.track{audio_track}.wav")
+        )
+        output_path = Path(
+            inputs.get("output_path", str(default_output))
+        )
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         cmd = [
             "ffmpeg", "-y",
             "-i", str(input_path),
+            "-map", f"0:a:{audio_track}",
             "-vn",
             "-acodec", "pcm_s16le",
             "-ar", "16000",
@@ -465,6 +543,25 @@ class AudioMixer(BaseTool):
         ]
 
         self.run_command(cmd)
+        peak_dbfs = self._pcm16_peak_dbfs(output_path)
+        silence_threshold_db = float(inputs.get("silence_threshold_db", -60.0))
+        if not -120.0 <= silence_threshold_db <= 0.0:
+            output_path.unlink(missing_ok=True)
+            return ToolResult(
+                success=False,
+                error="silence_threshold_db must be between -120 and 0",
+            )
+        if bool(inputs.get("reject_silence", True)) and peak_dbfs < silence_threshold_db:
+            output_path.unlink(missing_ok=True)
+            alternatives = [str(index) for index in range(audio_track_count) if index != audio_track]
+            hint = f" Try audio_track {', '.join(alternatives)}." if alternatives else ""
+            return ToolResult(
+                success=False,
+                error=(
+                    f"Audio track {audio_track} is silent (peak {peak_dbfs:.1f} dBFS); "
+                    f"extraction stopped.{hint}"
+                ),
+            )
 
         return ToolResult(
             success=True,
@@ -472,9 +569,31 @@ class AudioMixer(BaseTool):
                 "operation": "extract",
                 "input": str(input_path),
                 "output": str(output_path),
+                "audio_track": audio_track,
+                "audio_track_count": audio_track_count,
+                "peak_dbfs": round(peak_dbfs, 2) if math.isfinite(peak_dbfs) else None,
             },
             artifacts=[str(output_path)],
         )
+
+    @staticmethod
+    def _pcm16_peak_dbfs(path: Path) -> float:
+        """Measure a mono PCM16 WAV in chunks without loading it into memory."""
+        peak = 0
+        with wave.open(str(path), "rb") as handle:
+            if handle.getsampwidth() != 2:
+                raise ValueError(f"Expected PCM16 WAV output: {path}")
+            while True:
+                chunk = handle.readframes(65_536)
+                if not chunk:
+                    break
+                samples = array("h")
+                samples.frombytes(chunk)
+                if byteorder == "big":
+                    samples.byteswap()
+                if samples:
+                    peak = max(peak, max(samples), -min(samples))
+        return 20 * math.log10(peak / 32768) if peak else float("-inf")
 
     def _full_mix(self, inputs: dict[str, Any]) -> ToolResult:
         """One-call mix: layer narration tracks, add music with ducking, normalize.

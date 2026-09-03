@@ -18,7 +18,15 @@ from tools.base_tool import (
     ToolTier,
 )
 
-from .models import cues_to_words, load_transcript, parse_srt, probe_media, read_json, write_json
+from .models import (
+    cues_to_words,
+    file_sha256,
+    load_transcript,
+    parse_srt,
+    probe_media,
+    read_json,
+    write_json,
+)
 from .ported_video_use import group_into_phrases
 
 
@@ -56,6 +64,8 @@ class RawTranscript(BaseTool):
             "speaker_id": {"type": "string"},
             "language": {"type": "string"},
             "silence_threshold": {"type": "number", "minimum": 0.1},
+            "source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "transcript_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         },
     }
     output_schema = {"type": "object"}
@@ -117,8 +127,14 @@ class RawTranscript(BaseTool):
             "words": words,
             "metadata": {
                 "imported_from": str(transcript_path),
+                "source_sha256": str(inputs.get("source_sha256") or file_sha256(source_path)),
+                "source_size_bytes": source_path.stat().st_size,
+                "source_mtime_ns": source_path.stat().st_mtime_ns,
+                "transcript_sha256": str(
+                    inputs.get("transcript_sha256") or file_sha256(transcript_path)
+                ),
                 "offline": True,
-                "phrase_packing_algorithm": "browser-use/video-use@92c2b34e",
+                "phrase_packing_algorithm": "browser-use/video-use@9575612f",
             },
         }
         validate_artifact("source_transcript", artifact)

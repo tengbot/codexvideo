@@ -111,6 +111,21 @@ request, live capability manifest, pipeline run plan, preview-first budget
 policy, creative QA template, and a `CODEX_TASK.md` that Codex can execute.
 No provider is silently selected and no paid media call occurs during setup.
 
+To start from an existing recording, podcast, screen capture, or generated
+take, pass it directly to the same front door:
+
+```bash
+codexvideo create --media /path/to/source.mp4 \
+  --type clip \
+  --audio-track auto \
+  --language en
+```
+
+Add `--transcript /path/to/source.srt` when approved local timing already
+exists. The command fingerprints the source, samples review frames, inventories
+audio tracks, rejects silent tracks, caches the selected WAV, and writes a
+resumable ingest manifest. It does not start ASR or upload audio by itself.
+
 ### Render the zero-key demos
 
 ```bash

@@ -227,7 +227,7 @@ class TimelineView(BaseTool):
 
 class CutBoundaryQA(BaseTool):
     name = "cut_boundary_qa"
-    version = "1.0.0"
+    version = "1.1.0"
     tier = ToolTier.ANALYZE
     stability = ToolStability.BETA
     determinism = Determinism.DETERMINISTIC
@@ -242,6 +242,8 @@ class CutBoundaryQA(BaseTool):
         "silence_detection",
         "clipping_detection",
         "every_boundary_visualization",
+        "strict_revision_gate",
+        "attempt_history",
     ]
     best_for = ["Producing durable evidence that every EDL boundary was checked"]
     not_good_for = ["Judging whether the creative concept is persuasive"]
@@ -255,6 +257,8 @@ class CutBoundaryQA(BaseTool):
             "master_subtitles_path": {"type": "string"},
             "output_transcript_path": {"type": "string"},
             "silence_threshold_seconds": {"type": "number", "minimum": 0.2},
+            "attempt": {"type": "integer", "minimum": 1, "maximum": 3},
+            "strict": {"type": "boolean", "default": True},
         },
     }
     output_schema = {"type": "object"}
@@ -280,7 +284,11 @@ class CutBoundaryQA(BaseTool):
         video_path = Path(inputs["video_path"]).expanduser().resolve()
         edit_path = Path(inputs["edit_decisions_path"]).expanduser().resolve()
         project_dir = Path(inputs["project_dir"]).expanduser().resolve()
-        review_dir = project_dir / "review" / "cut-boundaries"
+        attempt = int(inputs.get("attempt") or 1)
+        if not 1 <= attempt <= 3:
+            raise ValueError("attempt must be between 1 and 3")
+        strict = bool(inputs.get("strict", True))
+        review_dir = project_dir / "review" / "cut-boundaries" / f"attempt-{attempt:02d}"
         review_dir.mkdir(parents=True, exist_ok=True)
         edit = read_json(edit_path)
         validate_artifact("edit_decisions", edit)
@@ -350,7 +358,7 @@ class CutBoundaryQA(BaseTool):
         )
 
         view_tool = TimelineView()
-        overview_path = project_dir / "review" / "timeline-overview.png"
+        overview_path = review_dir / "timeline-overview.png"
         overview = view_tool.execute(
             {
                 "video_path": str(video_path),
@@ -443,15 +451,25 @@ class CutBoundaryQA(BaseTool):
                 "black_intervals": black_intervals,
                 "output_transcript": str(output_transcript_path) if output_transcript_path else None,
                 "offline": True,
+                "attempt": attempt,
+                "retry_allowed": status != "pass" and attempt < 3,
+                "repair_required": status != "pass",
             },
         }
         validate_artifact("cut_qa_report", report)
         report_path = project_dir / "artifacts" / "cut_qa_report.json"
+        history_path = project_dir / "history" / f"cut_qa_report_attempt_{attempt:02d}.json"
+        write_json(history_path, report)
         write_json(report_path, report)
+        accepted = status == "pass" if strict else status != "fail"
         return ToolResult(
-            success=status != "fail",
-            data={"report": report, "report_path": str(report_path)},
-            artifacts=[str(report_path), str(overview_path)]
+            success=accepted,
+            data={
+                "report": report,
+                "report_path": str(report_path),
+                "history_path": str(history_path),
+            },
+            artifacts=[str(report_path), str(history_path), str(overview_path)]
             + [boundary["timeline_view_path"] for boundary in boundaries],
-            error="; ".join(issues) if status == "fail" else None,
+            error=("; ".join(issues) or "Cut review requires revision") if not accepted else None,
         )

@@ -13,6 +13,18 @@ from lib.paths import PROJECTS_DIR
 from tools.analysis.creative_qa import CreativeQA
 
 
+def _audio_track(value: str) -> str | int:
+    if value == "auto":
+        return value
+    try:
+        track = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("audio track must be 'auto' or a zero-based integer") from exc
+    if track < 0:
+        raise argparse.ArgumentTypeError("audio track must be zero or greater")
+    return track
+
+
 def _print(value: Any, as_json: bool) -> None:
     if as_json:
         print(json.dumps(value, indent=2, ensure_ascii=False))
@@ -44,6 +56,21 @@ def build_parser() -> argparse.ArgumentParser:
     create = sub.add_parser("create", help="Scaffold a routed, resumable production project")
     create.add_argument("prompt", nargs="?", default="")
     create.add_argument("--url")
+    create.add_argument(
+        "--media",
+        action="append",
+        type=Path,
+        default=[],
+        help="Local source media path; repeat for multiple files",
+    )
+    create.add_argument("--transcript", type=Path, help="Local SRT or word-timing JSON")
+    create.add_argument("--audio-track", type=_audio_track, default="auto")
+    create.add_argument(
+        "--prepare-media",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Probe, fingerprint, and cache source audio during project creation",
+    )
     create.add_argument("--title")
     create.add_argument("--project-id")
     create.add_argument("--type", default="auto")
@@ -95,8 +122,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             _print(result, args.json)
             return 0 if result["planning_ready"] else 2
         if args.command == "create":
-            if not args.prompt and not args.url:
-                parser.error("create requires a prompt or --url")
+            if not args.prompt and not args.url and not args.media:
+                parser.error("create requires a prompt, --url, or --media")
             result = create_project(
                 prompt=args.prompt,
                 source_url=args.url,
@@ -115,6 +142,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 provider_pack=args.provider_pack,
                 variants=args.variants,
                 projects_dir=args.projects_dir,
+                source_media_paths=args.media,
+                source_transcript_path=args.transcript,
+                audio_track=args.audio_track,
+                prepare_media=args.prepare_media,
             )
             _print(result, args.json)
             return 0 if result["status"] == "ready" else 2

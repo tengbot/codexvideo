@@ -66,6 +66,7 @@ required_skills:
   - meta/reviewer
   - meta/checkpoint-protocol
   - meta/animation-runtime-selector
+  - core/raw-footage-editing
 
 compatible_playbooks:
   recommended:
@@ -77,10 +78,18 @@ compatible_playbooks:
 stages:
   - name: idea
     skill: pipelines/screen-demo/idea-director
+    optional_artifacts_in:
+      - source_media_review
+      - source_ingest_manifest
+      - source_transcript
+      - source_ingest_manifest
     produces:
       - brief
       - decision_log
-    tools_available: []
+    optional_tools:
+      - raw_footage_ingest
+    tools_available:
+      - raw_footage_ingest
     checkpoint_required: true
     human_approval_default: true
     review_focus:
@@ -99,14 +108,17 @@ stages:
       - source_media_review
     produces:
       - script
-    required_tools:
-      - transcriber
     optional_tools:
+      - transcriber
       - scene_detect
       - audio_enhance
+      - raw_transcript
+      - timeline_view
     tools_available:
       - transcriber
       - scene_detect
+      - raw_transcript
+      - timeline_view
     checkpoint_required: true
     human_approval_default: true
     review_focus:
@@ -116,6 +128,7 @@ stages:
     success_criteria:
       - Schema-valid script artifact
       - Script sections have timestamps from transcript or manual annotation
+      - Transcript comes from approved timing data, manual annotation, or an explicitly selected transcriber
 
   - name: scene_plan
     skill: pipelines/screen-demo/scene-director
@@ -128,8 +141,10 @@ stages:
     required_tools: []
     optional_tools:
       - frame_sampler
+      - timeline_view
     tools_available:
       - frame_sampler
+      - timeline_view
     checkpoint_required: true
     human_approval_default: true
     review_focus:
@@ -180,7 +195,11 @@ stages:
       - script
     produces:
       - edit_decisions
-    tools_available: []
+      - editable_timeline
+    optional_tools:
+      - editable_timeline
+    tools_available:
+      - editable_timeline
     checkpoint_required: true
     human_approval_default: false
     review_focus:
@@ -207,12 +226,18 @@ stages:
     optional_tools:
       - video_trimmer
       - audio_enhance
+      - raw_footage_grade
+      - raw_edit_render
+      - cut_boundary_qa
     tools_available:
       - video_compose
       - hyperframes_compose
       - audio_mixer
       - video_trimmer
       - audio_enhance
+      - raw_footage_grade
+      - raw_edit_render
+      - cut_boundary_qa
     checkpoint_required: true
     human_approval_default: false
     review_focus:
@@ -221,9 +246,11 @@ stages:
       - Audio is clear with no keyboard/click noise
       - "render_runtime in edit_decisions matches proposal_packet — silent swap is a CRITICAL governance violation"
       - "For synthetic UI/terminal demos, render_runtime='remotion' (TerminalScene) is preferred; render_runtime='hyperframes' is valid for custom HTML UIs — in that case, lint+validate must pass before render"
+      - Real-capture edits include every-boundary QA evidence
     success_criteria:
       - Schema-valid render_report artifact
       - Output file exists and passes ffprobe validation
+      - Real-capture outputs have a passing cut_qa_report; generated-only outputs do not require one
 
   - name: publish
     skill: pipelines/screen-demo/publish-director

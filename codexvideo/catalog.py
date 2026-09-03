@@ -24,7 +24,13 @@ def load_catalog(path: Path | None = None) -> dict[str, Any]:
     return catalog
 
 
-def choose_format(*, requested: str, prompt: str, source_url: str | None) -> str:
+def choose_format(
+    *,
+    requested: str,
+    prompt: str,
+    source_url: str | None,
+    has_source_media: bool = False,
+) -> str:
     catalog = load_catalog()
     if requested != "auto":
         if requested not in catalog["formats"]:
@@ -44,6 +50,8 @@ def choose_format(*, requested: str, prompt: str, source_url: str | None) -> str
             return format_id
     if source_url:
         return "product-promo"
+    if has_source_media:
+        return "clip"
     return "faceless"
 
 
@@ -67,4 +75,3 @@ def destination_settings(destination: str, aspect: str | None) -> dict[str, Any]
     if aspect:
         settings["aspect"] = aspect
     return settings
-

@@ -14,7 +14,9 @@ from backlot.state import load_board_state
 from codexvideo.catalog import choose_format, choose_style, destination_settings, load_catalog
 from lib.checkpoint import init_project
 from lib.pipeline_loader import get_stage_order, load_pipeline
+from lib.source_media_review import detect_media_type, review_source_media
 from schemas.artifacts import validate_artifact
+from tools.editing.raw_footage.ingest import RawFootageIngest
 from tools.tool_registry import ToolRegistry
 
 
@@ -106,15 +108,49 @@ def create_project(
     provider_pack: str,
     variants: int,
     projects_dir: Path,
+    source_media_paths: list[Path] | None = None,
+    source_transcript_path: Path | None = None,
+    audio_track: str | int = "auto",
+    prepare_media: bool = True,
 ) -> dict[str, Any]:
     catalog = load_catalog()
-    format_id = choose_format(requested=requested_format, prompt=prompt, source_url=source_url)
+    media_files = [Path(path).expanduser().resolve() for path in source_media_paths or []]
+    missing_media = [str(path) for path in media_files if not path.is_file()]
+    if missing_media:
+        raise FileNotFoundError(f"Source media not found: {', '.join(missing_media)}")
+    media_types = {path: detect_media_type(path) for path in media_files}
+    unsupported_media = [
+        str(path) for path, media_type in media_types.items() if media_type is None
+    ]
+    if unsupported_media:
+        raise ValueError(f"Unsupported source media format: {', '.join(unsupported_media)}")
+    ingestable_media = [
+        path for path, media_type in media_types.items() if media_type in {"video", "audio"}
+    ]
+    if source_transcript_path:
+        source_transcript_path = Path(source_transcript_path).expanduser().resolve()
+        if not source_transcript_path.is_file():
+            raise FileNotFoundError(source_transcript_path)
+        if len(ingestable_media) != 1:
+            raise ValueError(
+                "source_transcript_path requires exactly one video or audio source"
+            )
+    format_id = choose_format(
+        requested=requested_format,
+        prompt=prompt,
+        source_url=source_url,
+        has_source_media=bool(ingestable_media),
+    )
     format_config = catalog["formats"][format_id]
     style_id = choose_style(format_id, requested_style)
     style = catalog["styles"][style_id]
     delivery = destination_settings(destination, aspect)
     duration = duration_seconds or int(format_config["default_duration_seconds"])
-    resolved_title = title or (source_url or prompt or format_config["label"])
+    resolved_title = title or (
+        source_url
+        or prompt
+        or (media_files[0].stem if media_files else format_config["label"])
+    )
     resolved_id = project_id or slugify(resolved_title)
 
     manifest = load_pipeline(format_config["pipeline"])
@@ -127,11 +163,75 @@ def create_project(
         style_playbook=style["playbook"],
     )
 
+    source_review = None
+    ingest_results: list[dict[str, Any]] = []
+    source_hashes: list[str] = []
+    if media_files:
+        registry = ToolRegistry()
+        registry.discover()
+        source_review = review_source_media(
+            media_files,
+            {
+                "pipeline_type": format_config["pipeline"],
+                "project_dir": str(project_dir),
+                "sample_frames": True,
+                "transcribe": False,
+            },
+            registry,
+        )
+        validate_artifact("source_media_review", source_review)
+        if prepare_media:
+            for index, media_path in enumerate(ingestable_media, start=1):
+                output_name = (
+                    "source_ingest_manifest.json"
+                    if len(ingestable_media) == 1
+                    else f"source_ingest_{index:02d}_{slugify(media_path.stem)}.json"
+                )
+                ingest = RawFootageIngest().execute(
+                    {
+                        "input_path": str(media_path),
+                        "project_dir": str(project_dir),
+                        "source_id": media_path.stem,
+                        "audio_track": audio_track,
+                        "transcript_path": (
+                            str(source_transcript_path) if source_transcript_path else None
+                        ),
+                        "language": language,
+                        "output_path": str(project_dir / "artifacts" / output_name),
+                    }
+                )
+                if ingest.success:
+                    source_hashes.append(ingest.data["manifest"]["source"]["sha256"])
+                    ingest_results.append(
+                        {
+                            "source": str(media_path),
+                            "status": "ready",
+                            "manifest_path": ingest.data["manifest_path"],
+                            "selected_audio_path": ingest.data["manifest"]["audio"][
+                                "selected_path"
+                            ],
+                            "next_action": ingest.data["manifest"]["next_action"],
+                        }
+                    )
+                else:
+                    ingest_results.append(
+                        {
+                            "source": str(media_path),
+                            "status": "needs_attention",
+                            "error": ingest.error,
+                        }
+                    )
+
     consumer_request = {
         "version": "1.0",
         "project_id": resolved_id,
         "created_at": _now(),
-        "subject": {"title": resolved_title, "source_url": source_url, "prompt": prompt},
+        "subject": {
+            "title": resolved_title,
+            "source_url": source_url,
+            "prompt": prompt,
+            "source_media": [str(path) for path in media_files],
+        },
         "intent": {
             "format": format_id,
             "audience": audience,
@@ -172,6 +272,7 @@ def create_project(
         format_config["optional_capabilities"],
         provider_pack,
     )
+    ingest_failed = any(item["status"] != "ready" for item in ingest_results)
     run_plan = {
         "version": "1.0",
         "project_id": resolved_id,
@@ -186,7 +287,11 @@ def create_project(
         },
         "stage_order": stage_order,
         "next_stage": stage_order[0],
-        "status": "ready" if capabilities["planning_ready"] else "needs_setup",
+        "status": (
+            "ready"
+            if capabilities["planning_ready"] and not ingest_failed
+            else "needs_setup"
+        ),
         "preview": {
             "required_before_batch": True,
             "max_duration_seconds": min(15, duration),
@@ -201,7 +306,9 @@ def create_project(
         },
         "resume": {
             "policy": "failed_or_stale_only",
-            "input_hash": _stable_hash(consumer_request),
+            "input_hash": _stable_hash(
+                {"consumer_request": consumer_request, "source_sha256": source_hashes}
+            ),
             "preserve_originals": True,
         },
         "quality_gates": [
@@ -209,7 +316,7 @@ def create_project(
             "proof_plan",
             "creative_qa_report",
             "technical_decode",
-        ],
+        ] + (["cut_qa_report"] if ingestable_media else []),
     }
     validate_artifact("run_plan", run_plan)
 
@@ -221,6 +328,9 @@ def create_project(
     ):
         with open(artifacts_dir / f"{name}.json", "w", encoding="utf-8") as handle:
             json.dump(artifact, handle, indent=2, ensure_ascii=False)
+    if source_review:
+        with open(artifacts_dir / "source_media_review.json", "w", encoding="utf-8") as handle:
+            json.dump(source_review, handle, indent=2, ensure_ascii=False)
 
     qa_template = {
         "version": "1.0",
@@ -249,6 +359,7 @@ def create_project(
         "consumer_format": format_id,
         "consumer_style": style_id,
         "source_url": source_url,
+        "source_media": [str(path) for path in media_files],
         "language": language,
         "destination": destination,
         "aspect": delivery["aspect"],
@@ -265,6 +376,7 @@ def create_project(
         "status": run_plan["status"],
         "next_stage": run_plan["next_stage"],
         "missing_required": capabilities["missing_required"],
+        "source_ingest": ingest_results,
         "task_file": str(task_path),
     }
 
@@ -299,6 +411,7 @@ before making creative decisions and resume from the first incomplete checkpoint
 
 - Product or subject: {subject['title']}
 - Source URL: {subject.get('source_url') or 'none'}
+- Source media: {', '.join(subject.get('source_media') or []) or 'none'}
 - User request: {subject['prompt']}
 - Audience: {request['intent']['audience']}
 - Delivery: {delivery['duration_seconds']}s, {delivery['aspect']}, {delivery['language']}, {delivery['destination']}
@@ -315,6 +428,8 @@ before making creative decisions and resume from the first incomplete checkpoint
 7. Produce a low-cost preview before any paid batch.
 8. Never substitute a provider, model, voice, or runtime without recording the choice.
 9. Complete both technical QA and `creative_qa_report.json` before delivery.
+10. When source video or audio is present, read `source_ingest_manifest`, confirm the selected
+    audio track before ASR, preserve the original, and require strict cut-boundary QA after render.
 
 ## Capability State
 
