@@ -62,8 +62,9 @@ class HyperFramesCompose(BaseTool):
     dependencies = ["cmd:npx", "cmd:ffmpeg"]
     install_instructions = (
         "Requires Node.js >= 22 (https://nodejs.org/) and FFmpeg "
-        "(https://ffmpeg.org/download.html). The HyperFrames CLI is fetched "
-        "on first use via `npx hyperframes` (npm package: `hyperframes`). "
+        "(https://ffmpeg.org/download.html). Use an already installed "
+        "hyperframes@0.8.29, or set CODEXVIDEO_HYPERFRAMES_CLI to the absolute "
+        "path of a cached dist/cli.js. Runtime checks never install packages. "
         "Note: the upstream monorepo develops the package as `@hyperframes/cli`, "
         "but it publishes to npm as `hyperframes`. `npx @hyperframes/cli` "
         "returns 404 -- do NOT use that form. Verify setup with "
@@ -342,7 +343,7 @@ class HyperFramesCompose(BaseTool):
 
         try:
             proc = subprocess.run(
-                [npx, "--yes", cls._NPM_PACKAGE, "doctor", "--json"],
+                [*cls._cli_command(), "doctor", "--json"],
                 capture_output=True,
                 text=True,
                 timeout=20,
@@ -390,7 +391,11 @@ class HyperFramesCompose(BaseTool):
         # a missing-node run would also show a confusing npm error.
         npm_resolve: dict[str, str] = {}
         if not reasons:
-            npm_resolve = self._resolve_npm_package()
+            npm_resolve = (
+                {"version": "explicit-local-cli"}
+                if os.environ.get("CODEXVIDEO_HYPERFRAMES_CLI")
+                else self._resolve_npm_package()
+            )
             if "error" in npm_resolve:
                 reasons.append(
                     f"npm package `{self._NPM_PACKAGE}` not resolvable: "
@@ -1347,6 +1352,17 @@ class HyperFramesCompose(BaseTool):
     # Utilities
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _cli_command() -> list[str]:
+        """Use one offline-safe command for preflight and rendering."""
+        entry = os.environ.get("CODEXVIDEO_HYPERFRAMES_CLI")
+        if entry:
+            path = Path(entry).expanduser().resolve()
+            if not path.is_file():
+                raise OSError(f"Configured HyperFrames CLI does not exist: {path}")
+            return [shutil.which("node") or "node", str(path)]
+        return [shutil.which("npx") or "npx", "--no-install", "hyperframes@0.8.29"]
+
     def _run_hf(
         self,
         args: list[str],
@@ -1361,7 +1377,7 @@ class HyperFramesCompose(BaseTool):
         want to raise CalledProcessError on non-zero exits — the caller
         parses lint/validate/render exit codes itself.
         """
-        cmd = ["npx", "--no-install", "hyperframes@0.8.29", *args]
+        cmd = [*self._cli_command(), *args]
         # On Windows, resolve the .cmd wrapper so subprocess can find it
         # without shell=True.
         if os.name == "nt":
