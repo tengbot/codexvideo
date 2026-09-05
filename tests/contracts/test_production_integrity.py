@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from lib.checkpoint import CheckpointValidationError, init_project, write_checkpoint
+from codexvideo.project import resume_project
 from lib.production_integrity import _snapshot, verify_stage
 from lib.render_binding import bind_render, validate_render_binding
 from tests.contracts.test_phase0_contracts import sample_artifact
@@ -131,3 +132,17 @@ def test_strict_checkpoint_detects_changed_inputs_and_blocks_next_stage(tmp_path
         write_checkpoint(tmp_path, "run", "script", "completed", {
             "script": sample_artifact("script"),
         }, human_approved=True)
+
+
+def test_resume_rejects_a_completed_checkpoint_with_missing_approval(tmp_path):
+    project = init_project("unapproved", title="Fixture", pipeline_type="framework-smoke", pipeline_dir=tmp_path)
+    path = write_checkpoint(tmp_path, "unapproved", "research", "completed", {
+        "research_brief": sample_artifact("research_brief"),
+    }, human_approved=True, human_approval_required=True)
+    checkpoint = json.loads(path.read_text())
+    checkpoint["human_approved"] = False
+    path.write_text(json.dumps(checkpoint))
+    result = resume_project(project)
+    assert result["next_stage"] == "research"
+    assert result["stage_status"] == "stale"
+    assert "approval" in result["blocked_reason"]

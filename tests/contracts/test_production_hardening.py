@@ -28,13 +28,14 @@ def test_aspect_override_changes_dimensions(destination, aspect, dimensions):
 def test_resume_never_skips_an_unfinished_predecessor(monkeypatch, tmp_path, status):
     monkeypatch.setattr("codexvideo.project.load_board_state", lambda _: {
         "project_id": "fixture", "pipeline": {"pipeline_type": "faceless-narrative"},
-        "stages": [{"name": "script", "status": status}, {"name": "assets", "status": "in_progress"}],
+        "stages": [{"name": "script", "status": status, "error": "Needs approval or repair"}, {"name": "assets", "status": "in_progress"}],
         "media": {"renders": []},
     })
     result = resume_project(tmp_path)
     assert result["next_stage"] == "script"
     assert result["stage_status"] == status
     assert result["awaiting_human"] == (status == "awaiting_human")
+    assert result["blocked_reason"] == "Needs approval or repair"
 
 
 @pytest.mark.parametrize("prompt,expected", [

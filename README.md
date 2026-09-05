@@ -136,6 +136,9 @@ podcast formats share the consumer research, proof, continuity, and script QA
 contracts with product promotion. `create` scaffolds this process; Codex drives
 it. This is not an unattended URL-to-video service.
 
+See the [production-hardening release notes](docs/RELEASE_2026-09-05.md) for
+verified changes, the governed invocation commands, and remaining boundaries.
+
 To start from an existing recording, podcast, screen capture, or generated
 take, pass it directly to the same front door:
 

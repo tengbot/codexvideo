@@ -400,6 +400,8 @@ def resume_project(project_dir: Path) -> dict[str, Any]:
             checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
             validate_checkpoint(checkpoint)
             verify_stage(project_dir, checkpoint)
+            if checkpoint.get("human_approval_required") and not checkpoint.get("human_approved"):
+                raise ValueError(f"Stage {stage['name']} is missing its required human approval")
         except (OSError, ValueError, KeyError) as exc:
             stage.update(status="stale", reason=str(exc))
             invalidated_by = stage["name"]
@@ -413,7 +415,7 @@ def resume_project(project_dir: Path) -> dict[str, Any]:
         "pipeline": state["pipeline"]["pipeline_type"],
         "next_stage": next_stage,
         "stage_status": active["status"] if active else "completed",
-        "blocked_reason": active.get("reason") if active else None,
+        "blocked_reason": (active.get("reason") or active.get("error")) if active else None,
         "awaiting_human": bool(active and active["status"] == "awaiting_human"),
         "completed": [stage["name"] for stage in state["stages"] if stage["status"] == "completed"],
         "render_count": len(state["media"]["renders"]),
