@@ -1,5 +1,8 @@
 # AI Dialogue Podcast Scene Director
 
+First read `skills/core/consumer-preproduction.md`. All outputs declared by the
+stage manifest are required, including the shared consumer and proof contracts.
+
 Convert `dialogue_script` and `cast_bible` into the canonical `scene_plan`.
 
 Map every turn to one of: two-shot, active-speaker close-up, listener reaction,
@@ -12,4 +15,3 @@ For every scene specify duration, speaker, eyeline, lens/framing, studio state,
 wardrobe, lighting, emotion, caption-safe area, and continuity reference. Evidence
 inserts must remain on screen long enough to read and may not imply facts the
 research does not support.
-

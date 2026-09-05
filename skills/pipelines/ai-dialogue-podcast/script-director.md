@@ -1,5 +1,8 @@
 # AI Dialogue Podcast Script Director
 
+First read `skills/core/consumer-preproduction.md`. All outputs declared by the
+stage manifest are required, including the shared consumer and proof contracts.
+
 Produce both canonical `script` and supplementary `dialogue_script`.
 
 Write spoken English unless the brief says otherwise. Use short turns, natural
@@ -13,4 +16,3 @@ perfect alternation. Keep claims linked to research evidence. Read the dialogue
 aloud mentally and revise any turn that sounds like a paragraph or press release.
 
 End with a useful decision, insight, or open question before any CTA.
-

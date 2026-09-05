@@ -1,5 +1,8 @@
 # AI Dialogue Podcast Proposal Director
 
+First read `skills/core/consumer-preproduction.md`. All outputs declared by the
+stage manifest are required, including the shared consumer and proof contracts.
+
 Create `proposal_packet`, `hook_candidates`, `cast_bible`, and `decision_log`.
 
 Generate at least three conversational hooks. A hook can be a challenge,

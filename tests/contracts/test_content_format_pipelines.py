@@ -40,6 +40,21 @@ def test_content_format_artifacts_are_registered():
     }.issubset(set(ARTIFACT_NAMES))
 
 
+def test_both_formats_require_shared_consumer_evidence_before_media():
+    for name in ("faceless-narrative", "ai-dialogue-podcast"):
+        manifest = load_pipeline(name)
+        stages = {stage["name"]: stage for stage in manifest["stages"]}
+        assert "core/consumer-preproduction" in manifest["required_skills"]
+        assert {"product_truth", "pain_library", "audience_job", "value_map"} <= set(stages["research"]["produces"])
+        assert {"creative_brief", "production_preset"} <= set(stages["proposal"]["produces"])
+        assert "script_qa_report" in stages["script"]["produces"]
+        assert {"proof_plan", "visual_continuity_bible", "shot_language_plan", "script_qa_report"} <= set(stages["assets"]["required_artifacts_in"])
+        assert "creative_qa_report" in stages["publish"]["required_artifacts_in"]
+        for stage in ("research", "proposal", "script", "scene_plan", "compose"):
+            director = ROOT / "skills" / f"{stages[stage]['skill']}.md"
+            assert "consumer-preproduction.md" in director.read_text()
+
+
 def test_hook_candidates_schema_accepts_scored_need_driven_hooks():
     validate_artifact(
         "hook_candidates",
@@ -149,4 +164,3 @@ def test_visual_match_and_audio_timeline_validate():
             ],
         },
     )
-

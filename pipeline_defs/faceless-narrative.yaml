@@ -22,6 +22,7 @@ extensions:
   custom_tools: false
 
 required_skills:
+  - core/consumer-preproduction
   - core/content-formats
   - core/raw-footage-editing
   - pipelines/faceless-narrative/executive-producer
@@ -45,10 +46,10 @@ stages:
   - name: research
     skill: pipelines/faceless-narrative/research-director
     optional_artifacts_in: [source_media_review, source_ingest_manifest, source_transcript]
-    produces: [research_brief]
+    produces: [research_brief, product_truth, pain_library, audience_job, value_map]
     optional_tools: [raw_footage_ingest, raw_transcript]
     tools_available: [raw_footage_ingest, raw_transcript]
-    checkpoint_required: false
+    checkpoint_required: true
     human_approval_default: false
     success_criteria:
       - Consumer need and search intent are explicit
@@ -56,8 +57,8 @@ stages:
 
   - name: proposal
     skill: pipelines/faceless-narrative/proposal-director
-    required_artifacts_in: [research_brief]
-    produces: [proposal_packet, hook_candidates, decision_log]
+    required_artifacts_in: [research_brief, product_truth, pain_library, audience_job, value_map]
+    produces: [proposal_packet, hook_candidates, decision_log, creative_brief, production_preset]
     tools_available: []
     checkpoint_required: true
     human_approval_default: true
@@ -67,9 +68,9 @@ stages:
 
   - name: script
     skill: pipelines/faceless-narrative/script-director
-    required_artifacts_in: [proposal_packet, hook_candidates]
+    required_artifacts_in: [proposal_packet, hook_candidates, product_truth, audience_job, value_map, creative_brief, production_preset]
     optional_artifacts_in: [research_brief]
-    produces: [script]
+    produces: [script, script_qa_report]
     tools_available: []
     checkpoint_required: true
     human_approval_default: true
@@ -79,10 +80,10 @@ stages:
 
   - name: scene_plan
     skill: pipelines/faceless-narrative/scene-director
-    required_artifacts_in: [script]
+    required_artifacts_in: [script, script_qa_report, product_truth, creative_brief]
     optional_artifacts_in: [research_brief, proposal_packet]
-    produces: [scene_plan]
-    tools_available: []
+    produces: [scene_plan, proof_plan, visual_continuity_bible, shot_language_plan]
+    tools_available: [shotcraft_catalog]
     checkpoint_required: true
     human_approval_default: true
     success_criteria:
@@ -91,7 +92,7 @@ stages:
 
   - name: assets
     skill: pipelines/faceless-narrative/asset-director
-    required_artifacts_in: [scene_plan, script]
+    required_artifacts_in: [scene_plan, script, script_qa_report, proof_plan, visual_continuity_bible, shot_language_plan, production_preset]
     produces: [asset_manifest, visual_match, audio_timeline]
     required_tools: [tts_selector]
     optional_tools: [direct_clip_search, image_selector, video_selector, music_gen, subtitle_gen]
@@ -119,7 +120,7 @@ stages:
     skill: pipelines/faceless-narrative/compose-director
     required_artifacts_in: [edit_decisions, asset_manifest]
     optional_artifacts_in: [scene_plan, editable_timeline, source_transcript]
-    produces: [render_report, final_review]
+    produces: [render_report, final_review, creative_qa_report]
     required_tools: [video_compose, audio_mixer]
     optional_tools: [video_stitch, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
     tools_available: [video_compose, hyperframes_compose, audio_mixer, video_stitch, raw_footage_grade, raw_edit_render, timeline_view, cut_boundary_qa]
@@ -132,7 +133,7 @@ stages:
 
   - name: publish
     skill: pipelines/faceless-narrative/publish-director
-    required_artifacts_in: [render_report, final_review]
+    required_artifacts_in: [render_report, final_review, creative_qa_report]
     produces: [publish_log]
     tools_available: [export_bundle]
     checkpoint_required: true

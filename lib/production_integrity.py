@@ -42,6 +42,14 @@ def snapshot_stage(project: Path, checkpoint: dict[str, Any]) -> dict[str, Any]:
         path = project / "artifacts" / f"{name}.json"
         value = json.loads(path.read_text(encoding="utf-8"))
         validate_artifact(name, value)
+        if name == "script_qa_report" and (value["overall_status"] != "pass" or
+                not all(check["passes"] for check in value["checks"].values())):
+            raise ValueError("Script QA must pass before downstream production")
+        if name == "creative_qa_report":
+            from tools.analysis.creative_qa import CreativeQA
+            reviewed = CreativeQA().execute({"report_path": str(path)})
+            if not reviewed.success:
+                raise ValueError(f"Creative QA blocks delivery: {reviewed.error}")
         snapshot[name] = _snapshot(name, value)
     for name in produces:
         value = checkpoint["artifacts"][name]

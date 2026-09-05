@@ -1,5 +1,8 @@
 # AI Dialogue Podcast Compose Director
 
+First read `skills/core/consumer-preproduction.md`. All outputs declared by the
+stage manifest are required, including the shared consumer and proof contracts.
+
 Route using `edit_decisions.render_runtime`; never silently replace the approved
 `render_runtime`. If Remotion or HyperFrames is unavailable, surface a blocker and
 append an approved `render_runtime_selection` revision before changing runtime.
@@ -14,4 +17,3 @@ speaker identity, voice identity, eyeline, studio/wardrobe continuity, reaction
 truth, caption placement, evidence accuracy, audio balance, and conversational
 pacing. Write `render_report` and `final_review`; reject a technically playable
 video when the people look or sound inconsistent.
-
