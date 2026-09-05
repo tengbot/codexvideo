@@ -48,6 +48,9 @@ def test_per_call_approval_binding_budget_and_duplicate_protection(run):
     assert not calls
     result = invoke_tool(project, "research", "unit", {}, "one", True, approval)
     assert result["status"] == "completed" and len(calls) == 1
+    receipt = json.loads((project / "history/tool-runs/one/receipt.json").read_text())
+    assert receipt["approval"]["approved"] is True
+    assert receipt["approval"]["user_statement"] == "Explicit test fixture approval"
     with pytest.raises(ValueError, match="already dispatched"):
         invoke_tool(project, "research", "unit", {}, "one", True, approval)
     tool.estimate_cost = lambda _: 0.75
@@ -67,6 +70,9 @@ def test_uncertain_paid_failure_preserves_reservation(run):
     result = invoke_tool(project, "research", "unit", {}, "one", True, approval)
     assert result["status"] == "uncertain" and result["reconciliation_pending"]
     assert json.loads((project / "cost_log.json").read_text())["budget_reserved_usd"] == 0.5
+    approval = _approve(project, invoke_tool(project, "research", "unit", {}, "two"))
+    with pytest.raises(ValueError, match="Reconcile"):
+        invoke_tool(project, "research", "unit", {}, "two", True, approval)
 
 
 def test_local_tool_needs_no_paid_approval_and_changed_file_invalidates_it(run):

@@ -56,7 +56,10 @@ provider after ranking; automatic provider selection is not a paid-call approval
 Each project serializes dispatch, reserves cost before execution, and saves an
 immutable request directory under `history/tool-runs/`. Do not retry a dispatched
 request ID. Provider timeouts retain uncertain reservations; investigate the
-provider receipt before reconciling or retrying. Estimates and tool-reported
+provider receipt before reconciling or retrying. An uncertain charge or ceiling
+breach blocks further paid dispatch in that project until reconciliation.
+The receipt preserves the actual supplied approval, not just its draft template.
+Estimates and tool-reported
 costs are not verified bills. The cap governs dispatch reservations, not a
 provider-side guarantee that an API cannot overcharge. Direct Python callers
 remain trusted code and can bypass this CLI; do not claim sandbox enforcement.

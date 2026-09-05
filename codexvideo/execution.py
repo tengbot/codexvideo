@@ -94,6 +94,7 @@ def invoke_tool(project: Path, stage: str, tool_name: str, inputs: dict, request
     if tool.get_status() != ToolStatus.AVAILABLE:
         raise ValueError(f"Tool is not available: {tool_name}; no fallback was executed")
     ceiling = estimate
+    approval_record = None
     if paid_or_unknown:
         if approval_path is None:
             raise ValueError("Explicit per-call approval is required; prepare and review this request first")
@@ -106,6 +107,7 @@ def invoke_tool(project: Path, stage: str, tool_name: str, inputs: dict, request
         ceiling = float(given["max_cost_usd"])
         if not math.isfinite(ceiling) or ceiling < estimate or ceiling <= 0:
             raise ValueError("Paid/unknown calls require a positive approved ceiling covering the estimate")
+        approval_record = {key: given[key] for key in approval}
     policy = _read(project / "artifacts/consumer_request.json")["execution"]
     lock = project / ".execution-lock"
     try:
@@ -116,6 +118,11 @@ def invoke_tool(project: Path, stage: str, tool_name: str, inputs: dict, request
         history = project / "history/tool-runs" / request_id
         if history.exists():
             raise ValueError("Request ID was already dispatched; inspect its receipt, do not resubmit blindly")
+        if paid_or_unknown:
+            for previous in (project / "history/tool-runs").glob("*/receipt.json"):
+                record = _read(previous)
+                if record.get("reconciliation_pending") or record.get("cost_ceiling_exceeded") or record.get("status") == "started":
+                    raise ValueError(f"Reconcile the prior uncertain charge before another paid call: {previous}")
         tracker = CostTracker(budget_total_usd=policy["budget_usd"], reserve_pct=0,
                               single_action_approval_usd=ceiling,
                               require_approval_for_new_paid_tool=False, mode=BudgetMode.CAP,
@@ -125,7 +132,8 @@ def invoke_tool(project: Path, stage: str, tool_name: str, inputs: dict, request
         entry_id = tracker.estimate(tool_name, request_id, ceiling)
         tracker.reserve(entry_id)
         history.mkdir(parents=True)
-        receipt = {**plan, "status": "started", "reserved_usd": ceiling, "cost_entry_id": entry_id}
+        receipt = {**plan, "status": "started", "reserved_usd": ceiling, "cost_entry_id": entry_id,
+                   "approval": approval_record}
         path = history / "receipt.json"
         path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
         try:
