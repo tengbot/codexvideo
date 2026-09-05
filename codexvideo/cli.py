@@ -11,6 +11,8 @@ from codexvideo.catalog import load_catalog
 from codexvideo.project import build_capability_manifest, create_project, resume_project
 from lib.paths import PROJECTS_DIR
 from tools.analysis.creative_qa import CreativeQA
+from tools.cost_tracker import ApprovalRequiredError, BudgetExceededError
+from jsonschema import ValidationError
 
 
 def _audio_track(value: str) -> str | int:
@@ -90,6 +92,22 @@ def build_parser() -> argparse.ArgumentParser:
     resume = sub.add_parser("resume", help="Report the next safe stage for a project")
     resume.add_argument("project", type=Path)
 
+    checkpoint = sub.add_parser("checkpoint", help="Validate and persist a stage's canonical artifacts")
+    checkpoint.add_argument("project", type=Path)
+    checkpoint.add_argument("stage")
+    checkpoint.add_argument("--status", choices=["in_progress", "awaiting_human", "completed", "failed"], required=True)
+    checkpoint.add_argument("--approval-note", help="Record actual explicit user approval; never invent it")
+    checkpoint.add_argument("--error")
+
+    invoke = sub.add_parser("invoke", help="Prepare or dispatch one governed tool call")
+    invoke.add_argument("project", type=Path)
+    invoke.add_argument("stage")
+    invoke.add_argument("tool")
+    invoke.add_argument("--inputs", type=Path, required=True)
+    invoke.add_argument("--request-id", required=True)
+    invoke.add_argument("--execute", action="store_true")
+    invoke.add_argument("--approval", type=Path)
+
     qa = sub.add_parser("qa", help="Enforce the creative quality gate")
     qa.add_argument("report", type=Path)
     qa.add_argument("--prepare-video", type=Path, help="Bind a fresh review to this render and reset previous scores")
@@ -155,6 +173,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = resume_project(args.project)
             _print(result, args.json)
             return 0
+        if args.command == "checkpoint":
+            from codexvideo.execution import persist_stage
+            result = persist_stage(args.project, args.stage, args.status, args.approval_note, args.error)
+            _print(result, args.json)
+            return 0
+        if args.command == "invoke":
+            from codexvideo.execution import invoke_tool
+            result = invoke_tool(args.project, args.stage, args.tool,
+                                 json.loads(args.inputs.read_text(encoding="utf-8")),
+                                 args.request_id, args.execute, args.approval)
+            _print(result, args.json)
+            return 0 if result["status"] in {"prepared", "completed"} else 3
         if args.command == "qa":
             result = CreativeQA().execute({
                 "operation": "prepare" if args.prepare_video else "evaluate",
@@ -165,7 +195,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             })
             _print(result.data if result.data else {"error": result.error}, args.json)
             return 0 if result.success else 3
-    except (OSError, ValueError, KeyError) as exc:
+    except (OSError, ValueError, KeyError, ApprovalRequiredError, BudgetExceededError, ValidationError) as exc:
         if args.json:
             print(json.dumps({"error": str(exc)}))
         else:

@@ -28,16 +28,8 @@ def _snapshot(name: str, value: Any) -> Any:
     return content_hash(value)
 
 
-def snapshot_stage(project: Path, checkpoint: dict[str, Any]) -> dict[str, Any]:
-    stage = next(s for s in load_pipeline_readonly(checkpoint["pipeline_type"])["stages"]
-                 if s["name"] == checkpoint["stage"])
-    produces = stage.get("produces", [])
-    missing = set(produces) - checkpoint["artifacts"].keys()
-    if missing:
-        raise ValueError(f"Stage {checkpoint['stage']} is missing declared outputs: {sorted(missing)}")
-    produces = [*produces, *(name for name in stage.get("optional_produces", [])
-                             if name in checkpoint["artifacts"])]
-    snapshot = {}
+def validate_stage_inputs(project: Path, stage: dict[str, Any]) -> dict[str, Any]:
+    values = {}
     for name in stage.get("required_artifacts_in", []):
         path = project / "artifacts" / f"{name}.json"
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -50,6 +42,21 @@ def snapshot_stage(project: Path, checkpoint: dict[str, Any]) -> dict[str, Any]:
             reviewed = CreativeQA().execute({"report_path": str(path)})
             if not reviewed.success:
                 raise ValueError(f"Creative QA blocks delivery: {reviewed.error}")
+        values[name] = value
+    return values
+
+
+def snapshot_stage(project: Path, checkpoint: dict[str, Any]) -> dict[str, Any]:
+    stage = next(s for s in load_pipeline_readonly(checkpoint["pipeline_type"])["stages"]
+                 if s["name"] == checkpoint["stage"])
+    produces = stage.get("produces", [])
+    missing = set(produces) - checkpoint["artifacts"].keys()
+    if missing:
+        raise ValueError(f"Stage {checkpoint['stage']} is missing declared outputs: {sorted(missing)}")
+    produces = [*produces, *(name for name in stage.get("optional_produces", [])
+                             if name in checkpoint["artifacts"])]
+    snapshot = {}
+    for name, value in validate_stage_inputs(project, stage).items():
         snapshot[name] = _snapshot(name, value)
     for name in produces:
         value = checkpoint["artifacts"][name]

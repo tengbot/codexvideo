@@ -39,6 +39,38 @@ specific evidence, then evaluate with `qa <report> --write`. Full decode proves
 playability only. Consumer exports require a passing, current, file-bound review;
 changing the script, source assets, or render requires a fresh review.
 
+Use the governed dispatch entry point instead of ad-hoc tool scripts:
+
+```bash
+python -m codexvideo --json invoke projects/<id> research promo_strategy \
+  --inputs projects/<id>/inputs/rank-pains.json --request-id rank-pains-01
+```
+
+The default only prepares a call. Read the tool's skills, inspect the plan, then
+add `--execute` for an authorized call. Paid or unknown-cost calls also require
+`--approval <json>` matching the returned approval template, exact input hash,
+request ID, tool, positive cost ceiling, and actual user authorization text.
+Never fill approval fields without that authorization. Dispatch a concrete
+provider after ranking; automatic provider selection is not a paid-call approval.
+
+Each project serializes dispatch, reserves cost before execution, and saves an
+immutable request directory under `history/tool-runs/`. Do not retry a dispatched
+request ID. Provider timeouts retain uncertain reservations; investigate the
+provider receipt before reconciling or retrying. Estimates and tool-reported
+costs are not verified bills. The cap governs dispatch reservations, not a
+provider-side guarantee that an API cannot overcharge. Direct Python callers
+remain trusted code and can bypass this CLI; do not claim sandbox enforcement.
+
+Save canonical stage artifacts without an improvised checkpoint script:
+
+```bash
+python -m codexvideo checkpoint projects/<id> research --status completed
+python -m codexvideo checkpoint projects/<id> proposal --status awaiting_human
+```
+
+Use `--approval-note` only for an actual user approval at a required gate. A
+pending proposal must not be marked completed just to make the pipeline advance.
+
 Use `python -m codexvideo doctor` for the live capability menu,
 `python -m codexvideo styles` for consumer-facing looks, and
 `python -m codexvideo resume projects/<id>` after an interruption.

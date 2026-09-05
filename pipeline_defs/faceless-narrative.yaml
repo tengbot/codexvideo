@@ -48,7 +48,7 @@ stages:
     optional_artifacts_in: [source_media_review, source_ingest_manifest, source_transcript]
     produces: [research_brief, product_truth, pain_library, audience_job, value_map]
     optional_tools: [raw_footage_ingest, raw_transcript]
-    tools_available: [raw_footage_ingest, raw_transcript]
+    tools_available: [promo_strategy, raw_footage_ingest, raw_transcript]
     checkpoint_required: true
     human_approval_default: false
     success_criteria:
@@ -59,7 +59,7 @@ stages:
     skill: pipelines/faceless-narrative/proposal-director
     required_artifacts_in: [research_brief, product_truth, pain_library, audience_job, value_map]
     produces: [proposal_packet, hook_candidates, decision_log, creative_brief, production_preset]
-    tools_available: []
+    tools_available: [promo_strategy]
     checkpoint_required: true
     human_approval_default: true
     success_criteria:
