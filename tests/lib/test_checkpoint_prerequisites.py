@@ -26,6 +26,22 @@ def _script_artifact() -> dict:
     }
 
 
+def test_delegated_review_is_not_fabricated_human_approval(tmp_path):
+    project = init_project("run", title="Run", pipeline_type="framework-smoke", pipeline_dir=tmp_path)
+    marker = json.loads((project / "project.json").read_text())
+    marker["review_policy"] = {"mode": "autonomous", "user_instruction": "Handle routine creative decisions yourself", "human_stages": ["script"]}
+    (project / "project.json").write_text(json.dumps(marker))
+    path = write_checkpoint(tmp_path, "run", "research", "completed", {"research_brief": sample_artifact("research_brief")})
+    checkpoint = json.loads(path.read_text())
+    assert checkpoint["human_approved"] is False
+    assert checkpoint["human_approval_required"] is False
+    assert checkpoint["metadata"]["review_authority"] == "agent"
+    with pytest.raises(CheckpointValidationError, match="GATE VIOLATION"):
+        write_checkpoint(tmp_path, "run", "script", "completed", {"script": _script_artifact()})
+    with pytest.raises(CheckpointValidationError, match="GATE VIOLATION"):
+        write_checkpoint(tmp_path, "run", "research", "completed", {"research_brief": sample_artifact("research_brief")}, human_approval_required=True)
+
+
 def test_later_stage_cannot_skip_a_missing_predecessor(tmp_path) -> None:
     init_project(
         "run",

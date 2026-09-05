@@ -340,7 +340,8 @@ def _enforce_stage_prerequisites(
         if checkpoint.get("status") != "completed":
             incomplete.append(predecessor)
             continue
-        if _stage_requires_approval(pipeline_type, predecessor) and not checkpoint.get(
+        if (_stage_requires_approval(pipeline_type, predecessor) and not _delegated_review(pipeline_dir / project_id, predecessor)
+                or checkpoint.get("human_approval_required")) and not checkpoint.get(
             "human_approved"
         ):
             unapproved.append(predecessor)
@@ -356,6 +357,17 @@ def _enforce_stage_prerequisites(
             + "; ".join(details)
             + f". Pipeline order: {stages}."
         )
+
+
+def _delegated_review(project: Path, stage: str) -> bool:
+    """Routine creative review may be delegated; explicit human gates remain binding."""
+    path = project / "project.json"
+    if not path.exists():
+        return False
+    policy = json.loads(path.read_text(encoding="utf-8")).get("review_policy", {})
+    return (policy.get("mode") == "autonomous"
+            and bool(str(policy.get("user_instruction", "")).strip())
+            and stage not in policy.get("human_stages", []))
 
 
 def _archive_superseded_checkpoint(path: Path, stage: str) -> None:
@@ -487,7 +499,10 @@ def write_checkpoint(
     # before gating (or by hand) still read as completed — deliberate
     # back-compat so in-flight and legacy projects keep resuming.
     manifest_gate = _stage_requires_approval(pipeline_type, stage)
-    gated = bool(manifest_gate) or human_approval_required
+    delegated = _delegated_review(pipeline_dir / project_id, stage)
+    gated = (bool(manifest_gate) and not delegated) or human_approval_required
+    if delegated:
+        metadata = {**(metadata or {}), "review_authority": "agent", "review_mode": "autonomous"}
     if gated:
         human_approval_required = True
         if status == "completed" and not human_approved:

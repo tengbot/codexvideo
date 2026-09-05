@@ -33,6 +33,7 @@
       "properties": {
         "id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
         "statement": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["consumer_need", "product_defect", "production_blocker"], "default": "consumer_need"},
         "user_language": {"type": "string", "minLength": 1},
         "persona": {"type": "string", "minLength": 1},
         "situation": {"type": "string", "minLength": 1},
@@ -43,7 +44,7 @@
           "type": "object",
           "required": ["frequency", "urgency", "severity", "commercial_intent", "confidence", "total"],
           "properties": {
-            "frequency": {"type": "number", "minimum": 0, "maximum": 5},
+            "frequency": {"type": ["number", "null"], "minimum": 0, "maximum": 5},
             "urgency": {"type": "number", "minimum": 0, "maximum": 5},
             "severity": {"type": "number", "minimum": 0, "maximum": 5},
             "commercial_intent": {"type": "number", "minimum": 0, "maximum": 5},

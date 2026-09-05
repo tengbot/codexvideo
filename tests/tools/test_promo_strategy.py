@@ -54,6 +54,28 @@ def _pain_library() -> dict:
     }
 
 
+def test_defects_are_not_selected_as_ad_angles(tmp_path):
+    data = _pain_library()
+    data["pains"][0]["kind"] = "product_defect"
+    data["pains"][1]["scores"]["frequency"] = None
+    path = _write(tmp_path / "pains.json", data)
+    result = PromoStrategy().execute({"operation": "rank_pains", "pain_library_path": str(path)})
+    assert result.success
+    assert "pain-01" not in result.data["selected_pain_ids"]
+    assert next(p for p in result.data["pain_library"]["pains"] if p["id"] == "pain-02")["scores"]["frequency"] is None
+
+
+def test_all_blockers_fail_without_rewriting_library(tmp_path):
+    data = _pain_library()
+    for pain in data["pains"]:
+        pain["kind"] = "production_blocker"
+    path = _write(tmp_path / "pains.json", data)
+    before = path.read_bytes()
+    result = PromoStrategy().execute({"operation": "rank_pains", "pain_library_path": str(path)})
+    assert not result.success
+    assert path.read_bytes() == before
+
+
 def _audience_job() -> dict:
     return {
         "version": "1.0",

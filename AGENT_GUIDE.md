@@ -6,6 +6,16 @@ For architecture, key files, and conventions see [`PROJECT_CONTEXT.md`](PROJECT_
 
 ## Consumer Front Door
 
+Current user instructions override routine creative-review defaults. When the
+user delegates execution without repeated confirmations, record
+`project.json.review_policy = {"mode": "autonomous", "user_instruction":
+"<actual instruction>", "human_stages": []}`. Review the work as the agent;
+never represent this as human approval. Explicit user-requested review stages
+belong in `human_stages` and still require approval. Paid-call authorization,
+identity consent, account access, and platform safeguards are unchanged.
+The runtime/voice shortlist below is then an internal comparison followed by a
+brief decision announcement, not a request to the user to operate the tools.
+
 When a production project already contains `CODEX_TASK.md`, read it plus
 `artifacts/consumer_request.json`, `artifacts/capability_manifest.json`, and
 `artifacts/run_plan.json`, then resume from the first incomplete checkpoint.

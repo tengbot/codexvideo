@@ -20,6 +20,11 @@ behavior, inference, and blocked/unverified steps. Record dates, source URLs,
 asset ownership, and disallowed claims. No unsupported traffic, sales, or search
 volume estimates. Demand rankings without analytics are hypotheses.
 
+Classify each entry's `kind` as `consumer_need`, `product_defect`, or
+`production_blocker`. Only consumer needs can be selected as ad angles. Keep
+site defects in the engineering backlog, even when they are urgent. Set
+unmeasured frequency to `null`, not a fabricated demand score.
+
 For a campaign, explore 20-50 distinct needs, then draft about ten scripts and
 recommend five. For a single sample, investigate several needs, propose three
 hooks, and lock one consumer problem before obtaining media.

@@ -26,7 +26,7 @@ class PromoStrategy(BaseTool):
     """Rank pains, enforce the three-second hook gate, and close the learning loop."""
 
     name = "promo_strategy"
-    version = "1.1.0"
+    version = "1.2.0"
     tier = ToolTier.ANALYZE
     stability = ToolStability.BETA
     determinism = Determinism.DETERMINISTIC
@@ -118,7 +118,7 @@ class PromoStrategy(BaseTool):
                 raise ValueError(f"Duplicate pain id: {pain_id}")
             seen.add(pain_id)
             scores = pain["scores"]
-            scores["total"] = round(sum(float(scores[key]) for key in (
+            scores["total"] = round(sum(float(scores[key] or 0) for key in (
                 "frequency", "urgency", "severity", "commercial_intent", "confidence"
             )), 3)
         ranked["pains"].sort(key=lambda pain: (
@@ -127,7 +127,11 @@ class PromoStrategy(BaseTool):
         for index, pain in enumerate(ranked["pains"], start=1):
             pain["rank"] = index
         top_n = int(inputs.get("top_n", 5))
-        ranked["selected_pain_ids"] = [pain["id"] for pain in ranked["pains"][:top_n]]
+        eligible = [pain for pain in ranked["pains"] if pain.get("kind", "consumer_need") == "consumer_need"]
+        if not eligible:
+            raise ValueError("No consumer needs to select; product defects and production blockers are not ad angles")
+        ranked["selected_pain_ids"] = [pain["id"] for pain in eligible[:top_n]]
+        ranked.setdefault("metadata", {})["selection_basis"] = "Editorial priority, not measured demand or conversion probability"
         validate_artifact("pain_library", ranked)
         output = Path(inputs.get("output_path") or path)
         self._write_json(output, ranked)
@@ -251,6 +255,8 @@ class PromoStrategy(BaseTool):
             raise ValueError("Creative brief product_id does not match product truth")
         if brief["pain_id"] not in pains:
             raise ValueError(f"Unknown creative pain_id: {brief['pain_id']}")
+        if pains[brief["pain_id"]].get("kind", "consumer_need") != "consumer_need":
+            raise ValueError("Campaign pain must be a consumer need, not a product defect or production blocker")
         if "audience_job" in artifacts:
             if artifacts["audience_job"]["product_id"] != truth["product_id"]:
                 raise ValueError("Audience job product_id does not match product truth")
