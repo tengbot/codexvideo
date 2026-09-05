@@ -934,6 +934,7 @@ class HyperFramesCompose(BaseTool):
             "--fps", str(fps),
             "--quality", quality,
             "--strict",
+            "--workers", "1",
         ]
         proc = self._run_hf(args, cwd=workspace, timeout=1800, check=False)
         steps["render"] = {
@@ -1360,7 +1361,7 @@ class HyperFramesCompose(BaseTool):
         want to raise CalledProcessError on non-zero exits — the caller
         parses lint/validate/render exit codes itself.
         """
-        cmd = ["npx", "--yes", "hyperframes", *args]
+        cmd = ["npx", "--no-install", "hyperframes@0.8.29", *args]
         # On Windows, resolve the .cmd wrapper so subprocess can find it
         # without shell=True.
         if os.name == "nt":
