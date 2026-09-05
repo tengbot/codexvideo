@@ -23,6 +23,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from lib.render_binding import validate_render_binding
+from tools.analysis.creative_qa import CreativeQA
+
 from tools.base_tool import (
     BaseTool,
     Determinism,
@@ -72,6 +75,8 @@ class ExportBundle(BaseTool):
         "type": "object",
         "required": ["video_path", "title"],
         "properties": {
+            "project_dir": {"type": "string"},
+            "creative_qa_path": {"type": "string"},
             "video_path": {
                 "type": "string",
                 "description": "Path to the final rendered video (from render_report.outputs[].path).",
@@ -164,6 +169,28 @@ class ExportBundle(BaseTool):
         if not video_path.is_file():
             return ToolResult(success=False, error=f"video_path not found: {video_path}")
 
+        owner = next(
+            (parent for parent in video_path.resolve().parents if (parent / "project.json").is_file()), None
+        )
+        project = Path(inputs["project_dir"]).expanduser().resolve() if inputs.get("project_dir") else owner
+        if owner is not None and project != owner:
+            return ToolResult(success=False, error="Delivery gate: project_dir does not own this render")
+        review_path = inputs.get("creative_qa_path")
+        # Consumer projects cannot bypass acceptance by omitting a CLI flag.
+        if project is not None and (project / "artifacts/consumer_request.json").is_file():
+            review_path = review_path or str(project / "artifacts/creative_qa_report.json")
+        if review_path:
+            try:
+                review = json.loads(Path(review_path).read_text(encoding="utf-8"))
+                if review.get("overall_status") != "pass":
+                    raise ValueError("Creative review has not passed")
+                checked = CreativeQA().execute({"report_path": str(review_path)})
+                if not checked.success:
+                    raise ValueError(checked.error)
+                validate_render_binding(review.get("render_binding"), video_path)
+            except (OSError, ValueError, KeyError) as exc:
+                return ToolResult(success=False, error=f"Delivery gate: {exc}")
+
         title = inputs["title"]
         project_name = inputs.get("project_name") or self._infer_project_name(video_path)
 
@@ -193,6 +220,10 @@ class ExportBundle(BaseTool):
             d.mkdir(parents=True, exist_ok=True)
 
         files_written: list[str] = []
+        if review_path:
+            destination = meta_dir / "creative_qa_report.json"
+            shutil.copy2(review_path, destination)
+            files_written.append(str(destination))
 
         # Video
         out_video = video_dir / f"output{video_path.suffix or '.mp4'}"

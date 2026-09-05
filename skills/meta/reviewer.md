@@ -84,7 +84,7 @@ Count findings by severity:
 |----------|--------|
 | 0 critical, any suggestions/nitpicks | **Pass** — proceed to checkpoint. Note suggestions for the record. |
 | 1+ critical findings | **Revise** — fix all critical findings, then re-review (max 2 rounds). |
-| After 2 revision rounds, still critical | **Pass with warnings** — proceed anyway, note unresolved issues. Never block indefinitely. |
+| After 2 revision rounds, still critical | **Blocked** - stop automatic repairs, preserve evidence and ask for the next decision. Never publish an unresolved critical defect. |
 
 ### Step 7: Record Review
 
@@ -121,7 +121,7 @@ Structure your review as:
 
 2. **Critical means critical.** Don't inflate severity. A missing schema field is critical. A slightly wordy paragraph is a suggestion. A comma splice is a nitpick.
 
-3. **Two rounds max.** The goal is shipping, not perfection. After two revision rounds, pass with warnings and move on. Perfectionism kills pipelines.
+3. **Two automatic repair rounds max.** Preserve each attempt. When critical findings remain, stop and report a blocked stage with evidence. Noncritical suggestions may be deferred explicitly; missing approval, broken playback, false claims, and missing required media may not be waived.
 
 4. **Review the artifact, not the process.** You're checking the output, not how it was produced. If the brief is compelling, it doesn't matter if the agent used an unusual approach.
 

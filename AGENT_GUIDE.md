@@ -21,6 +21,24 @@ The command performs deterministic routing and persistence only. It never
 chooses claims, providers, models, voices, or final creative direction. After
 creation, follow the generated `CODEX_TASK.md` and the selected pipeline.
 
+`planning_ready` means the agent can begin preproduction, not that generation
+or rendering is ready. Runtime availability is inventory, not authorization.
+New consumer projects persist schema-validated stage outputs and fingerprints;
+changed inputs invalidate dependent checkpoints. Resume and repair the first
+failed or stale stage before proceeding.
+
+Prepare final acceptance against the actual rendered file:
+
+```bash
+python -m codexvideo qa projects/<id>/artifacts/creative_qa_report.json \
+  --prepare-video projects/<id>/output.mp4 --project projects/<id>
+```
+
+Preparation resets previous scores. Inspect the bound video and audio, record
+specific evidence, then evaluate with `qa <report> --write`. Full decode proves
+playability only. Consumer exports require a passing, current, file-bound review;
+changing the script, source assets, or render requires a fresh review.
+
 Use `python -m codexvideo doctor` for the live capability menu,
 `python -m codexvideo styles` for consumer-facing looks, and
 `python -m codexvideo resume projects/<id>` after an interruption.
@@ -659,7 +677,9 @@ The reviewer is a meta skill (`skills/meta/reviewer.md`) — advisory, never dir
 
 - Self-review after every stage execution, before checkpointing.
 - Load `review_focus` items from the pipeline manifest for the current stage.
-- Maximum two review rounds. After that, pass with warnings and move on.
+- Maximum two automatic repair rounds. If critical findings remain, mark the
+  stage blocked and present the evidence and next choice. Never waive a critical
+  defect merely because the retry budget is exhausted.
 - Findings categorized: critical (must fix), suggestion (should fix), nitpick (nice-to-have).
 - Critical findings -> fix and re-review. Suggestions -> note and proceed.
 - Check playbook `quality_rules` as constraints, not suggestions.

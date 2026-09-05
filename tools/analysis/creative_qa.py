@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from schemas.artifacts import validate_artifact
+from lib.render_binding import bind_render, validate_render_binding, verify_playable_video
 from tools.base_tool import (
     BaseTool,
     Determinism,
@@ -37,7 +38,10 @@ class CreativeQA(BaseTool):
         "type": "object",
         "required": ["report_path"],
         "properties": {
+            "operation": {"enum": ["prepare", "evaluate"], "default": "evaluate"},
             "report_path": {"type": "string"},
+            "video_path": {"type": "string"},
+            "project_dir": {"type": "string"},
             "output_path": {"type": ["string", "null"]},
             "minimum_score": {"type": "number", "minimum": 0, "maximum": 1},
         },
@@ -60,6 +64,23 @@ class CreativeQA(BaseTool):
             report = json.loads(path.read_text(encoding="utf-8"))
             validate_artifact("creative_qa_report", report)
             checks = report["checks"]
+            if inputs.get("operation") == "prepare":
+                verify_playable_video(Path(inputs["video_path"]))
+                report["render_binding"] = bind_render(
+                    Path(inputs["video_path"]), Path(inputs.get("project_dir") or path.parent.parent)
+                )
+                report["evaluated_at"] = None
+                report["overall_status"] = "pending"
+                report["overall_score"] = 0.0
+                report["blocking_issues"] = ["new render requires visual and audio review"]
+                for check in checks.values():
+                    check.update(score=0.0, passes=False, evidence="pending review of bound render")
+                validate_artifact("creative_qa_report", report)
+                path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+                return ToolResult(success=True, data={"creative_qa_report": report}, artifacts=[str(path)])
+            validate_render_binding(report.get("render_binding"))
+            decode_evidence = verify_playable_video(Path(report["render_binding"]["video"]["path"]))
+            checks["technical_decode"] = {"score": 1.0, "passes": True, "evidence": decode_evidence}
             minimum = float(inputs.get("minimum_score", 0.80))
             score = round(sum(float(check["score"]) for check in checks.values()) / len(checks), 3)
             blocking = [name for name in self._CRITICAL if not checks[name]["passes"]]

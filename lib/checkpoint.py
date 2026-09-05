@@ -15,6 +15,7 @@ from typing import Any, Optional
 import jsonschema
 
 from schemas.artifacts import ARTIFACT_NAMES, validate_artifact
+from lib.production_integrity import snapshot_stage, strict_project, verify_stage
 
 # All known stages across all pipelines (used only for artifact name lookup).
 ALL_KNOWN_STAGES = frozenset([
@@ -325,7 +326,8 @@ def _enforce_stage_prerequisites(
             with open(path, encoding="utf-8") as handle:
                 checkpoint = json.load(handle)
             validate_checkpoint(checkpoint)
-        except (OSError, json.JSONDecodeError, CheckpointValidationError):
+            verify_stage(pipeline_dir / project_id, checkpoint)
+        except (OSError, ValueError, KeyError, CheckpointValidationError):
             incomplete.append(predecessor)
             continue
         if (
@@ -555,6 +557,13 @@ def write_checkpoint(
                     plan_or_top["decision_log_ref"] = log_ref
 
     validate_checkpoint(checkpoint)
+
+    if status in {"completed", "awaiting_human"} and strict_project(pipeline_dir / project_id):
+        try:
+            hashes = snapshot_stage(pipeline_dir / project_id, checkpoint)
+        except (OSError, ValueError, KeyError) as exc:
+            raise CheckpointValidationError(f"ARTIFACT INTEGRITY VIOLATION: {exc}") from exc
+        checkpoint.setdefault("metadata", {})["artifact_hashes"] = hashes
 
     path = _checkpoint_path(pipeline_dir, project_id, stage)
     path.parent.mkdir(parents=True, exist_ok=True)

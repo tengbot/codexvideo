@@ -96,6 +96,11 @@
             "items": { "type": "string" },
             "description": "Artifact names this stage produces"
           },
+          "optional_produces": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Additional outputs validated and persisted when supplied"
+          },
           "preferred_tools": {
             "type": "array",
             "items": { "type": "string" },

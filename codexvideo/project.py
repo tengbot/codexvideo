@@ -12,7 +12,8 @@ from typing import Any
 
 from backlot.state import load_board_state
 from codexvideo.catalog import choose_format, choose_style, destination_settings, load_catalog
-from lib.checkpoint import init_project
+from lib.checkpoint import init_project, validate_checkpoint
+from lib.production_integrity import verify_stage
 from lib.pipeline_loader import get_stage_order, load_pipeline
 from lib.source_media_review import detect_media_type, review_source_media
 from schemas.artifacts import validate_artifact
@@ -81,6 +82,8 @@ def build_capability_manifest(
         "optional": optional,
         "missing_required": missing_required,
         "planning_ready": not missing_required,
+        "render_ready": False,
+        "render_blockers": ["approved production plan and local assets have not been verified"],
         "selected_provider_pack": provider_pack,
         "provider_packs": packs,
         "runtime_warnings": summary["runtime_warnings"],
@@ -288,7 +291,7 @@ def create_project(
         "stage_order": stage_order,
         "next_stage": stage_order[0],
         "status": (
-            "ready"
+            "planning_ready"
             if capabilities["planning_ready"] and not ingest_failed
             else "needs_setup"
         ),
@@ -361,6 +364,7 @@ def create_project(
         "source_url": source_url,
         "source_media": [str(path) for path in media_files],
         "language": language,
+        "integrity_version": 1,
         "destination": destination,
         "aspect": delivery["aspect"],
         "run_plan": "artifacts/run_plan.json",
@@ -383,6 +387,22 @@ def create_project(
 
 def resume_project(project_dir: Path) -> dict[str, Any]:
     state = load_board_state(project_dir)
+    invalidated_by = None
+    for stage in state["stages"]:
+        if stage["status"] != "completed":
+            invalidated_by = invalidated_by or stage["name"]
+            continue
+        if invalidated_by:
+            stage.update(status="stale", reason=f"Blocked by {invalidated_by}")
+            continue
+        checkpoint_path = project_dir / f"checkpoint_{stage['name']}.json"
+        try:
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            validate_checkpoint(checkpoint)
+            verify_stage(project_dir, checkpoint)
+        except (OSError, ValueError, KeyError) as exc:
+            stage.update(status="stale", reason=str(exc))
+            invalidated_by = stage["name"]
     active = next(
         (stage for stage in state["stages"] if stage["status"] != "completed"),
         None,
@@ -393,6 +413,7 @@ def resume_project(project_dir: Path) -> dict[str, Any]:
         "pipeline": state["pipeline"]["pipeline_type"],
         "next_stage": next_stage,
         "stage_status": active["status"] if active else "completed",
+        "blocked_reason": active.get("reason") if active else None,
         "awaiting_human": bool(active and active["status"] == "awaiting_human"),
         "completed": [stage["name"] for stage in state["stages"] if stage["status"] == "completed"],
         "render_count": len(state["media"]["renders"]),

@@ -21,7 +21,7 @@ from tools.base_tool import (
     ToolTier,
 )
 
-from .models import load_transcript, probe_media, read_json, run_command, timeline_boundaries, write_json
+from .models import file_sha256, load_transcript, probe_media, read_json, run_command, timeline_boundaries, write_json
 from .ported_video_use import compute_envelope, find_silences, words_in_range
 
 
@@ -274,7 +274,25 @@ class CutBoundaryQA(BaseTool):
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         try:
-            return self._inspect(inputs)
+            requested = inputs.get("attempt")
+            if requested is not None and (isinstance(requested, bool) or not isinstance(requested, int) or not 1 <= requested <= 3):
+                raise ValueError("attempt must be between 1 and 3")
+            fingerprint = file_sha256(Path(inputs["video_path"]).expanduser().resolve())
+            root = Path(inputs["project_dir"]).expanduser().resolve() / "history" / "cut-qa" / fingerprint
+            root.mkdir(parents=True, exist_ok=True)
+            for attempt in range(1, 4):
+                slot = root / f"attempt-{attempt:02d}"
+                if slot.exists():
+                    continue
+                if requested is not None and requested != attempt:
+                    raise ValueError(f"Next immutable QA attempt is {attempt}, not {requested}")
+                try:
+                    slot.mkdir()
+                except FileExistsError:
+                    continue
+                write_json(slot / "started.json", {"attempt": attempt, "render_sha256": fingerprint})
+                return self._inspect({**inputs, "attempt": attempt, "_review_slot": str(slot), "_render_sha256": fingerprint})
+            raise ValueError("Three QA attempts already recorded for this render; review the failures before a new render")
         except (OSError, ValueError, KeyError, json.JSONDecodeError, RuntimeError) as exc:
             return ToolResult(success=False, error=str(exc))
 
@@ -288,7 +306,7 @@ class CutBoundaryQA(BaseTool):
         if not 1 <= attempt <= 3:
             raise ValueError("attempt must be between 1 and 3")
         strict = bool(inputs.get("strict", True))
-        review_dir = project_dir / "review" / "cut-boundaries" / f"attempt-{attempt:02d}"
+        review_dir = Path(inputs["_review_slot"]) / "frames"
         review_dir.mkdir(parents=True, exist_ok=True)
         edit = read_json(edit_path)
         validate_artifact("edit_decisions", edit)
@@ -452,13 +470,14 @@ class CutBoundaryQA(BaseTool):
                 "output_transcript": str(output_transcript_path) if output_transcript_path else None,
                 "offline": True,
                 "attempt": attempt,
+                "render_sha256": inputs["_render_sha256"],
                 "retry_allowed": status != "pass" and attempt < 3,
                 "repair_required": status != "pass",
             },
         }
         validate_artifact("cut_qa_report", report)
         report_path = project_dir / "artifacts" / "cut_qa_report.json"
-        history_path = project_dir / "history" / f"cut_qa_report_attempt_{attempt:02d}.json"
+        history_path = Path(inputs["_review_slot"]) / "report.json"
         write_json(history_path, report)
         write_json(report_path, report)
         accepted = status == "pass" if strict else status != "fail"

@@ -12,6 +12,8 @@
     "optional": {"$ref": "#/$defs/capabilityList"},
     "missing_required": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
     "planning_ready": {"type": "boolean"},
+    "render_ready": {"type": "boolean"},
+    "render_blockers": {"type": "array", "items": {"type": "string"}},
     "selected_provider_pack": {"type": "string", "minLength": 1},
     "provider_packs": {
       "type": "array",

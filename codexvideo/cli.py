@@ -92,6 +92,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     qa = sub.add_parser("qa", help="Enforce the creative quality gate")
     qa.add_argument("report", type=Path)
+    qa.add_argument("--prepare-video", type=Path, help="Bind a fresh review to this render and reset previous scores")
+    qa.add_argument("--project", type=Path)
     qa.add_argument("--write", action="store_true", help="Write evaluated status back to the report")
     return parser
 
@@ -148,13 +150,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 prepare_media=args.prepare_media,
             )
             _print(result, args.json)
-            return 0 if result["status"] == "ready" else 2
+            return 0 if result["status"] in {"ready", "planning_ready"} else 2
         if args.command == "resume":
             result = resume_project(args.project)
             _print(result, args.json)
             return 0
         if args.command == "qa":
             result = CreativeQA().execute({
+                "operation": "prepare" if args.prepare_video else "evaluate",
+                **({"video_path": str(args.prepare_video)} if args.prepare_video else {}),
+                **({"project_dir": str(args.project)} if args.project else {}),
                 "report_path": str(args.report),
                 "output_path": str(args.report) if args.write else None,
             })

@@ -16,6 +16,7 @@ from schemas.artifacts import ARTIFACT_NAMES, validate_artifact
 from tools.analysis.creative_qa import CreativeQA
 from tools.tool_registry import ToolRegistry
 from styles.playbook_loader import load_playbook
+from lib.render_binding import bind_render
 
 
 def _create(tmp_path: Path, *, prompt: str, format_id: str, project_id: str) -> dict:
@@ -68,7 +69,7 @@ def test_golden_flows_create_resumable_projects(tmp_path, format_id, pipeline, p
     result = _create(tmp_path, prompt=prompt, format_id=format_id, project_id=f"golden-{format_id}")
     project = Path(result["project_dir"])
     assert result["pipeline"] == pipeline
-    assert result["status"] == "ready"
+    assert result["status"] == "planning_ready"
     assert (project / "CODEX_TASK.md").is_file()
     assert "explicit consumer pain" in (project / "CODEX_TASK.md").read_text(encoding="utf-8")
 
@@ -95,7 +96,10 @@ def test_front_door_artifacts_and_creative_qa_tool_are_registered():
     assert registry.get("creative_qa") is not None
 
 
-def test_creative_qa_fails_critical_checks_and_passes_reviewed_report(tmp_path):
+def test_creative_qa_fails_critical_checks_and_passes_reviewed_report(tmp_path, monkeypatch):
+    monkeypatch.setattr("tools.analysis.creative_qa.verify_playable_video", lambda _: "unit decode fixture")
+    video = tmp_path / "unit-video.mp4"
+    video.write_bytes(b"unit fixture; decoder tested separately")
     report_path = tmp_path / "creative_qa_report.json"
     checks = {
         name: {"score": 0.9, "passes": True, "evidence": f"verified {name}"}
@@ -112,6 +116,7 @@ def test_creative_qa_fails_critical_checks_and_passes_reviewed_report(tmp_path):
         "overall_score": 0.0,
         "overall_status": "pending",
         "blocking_issues": [],
+        "render_binding": bind_render(video, tmp_path),
     }
     report_path.write_text(json.dumps(report), encoding="utf-8")
     passed = CreativeQA().execute({"report_path": str(report_path), "output_path": str(report_path)})
@@ -177,7 +182,7 @@ def test_create_with_media_routes_to_clip_and_prepares_source(tmp_path: Path):
 
     project = Path(result["project_dir"])
     assert result["format"] == "clip"
-    assert result["status"] == "ready"
+    assert result["status"] == "planning_ready"
     assert result["source_ingest"][0]["status"] == "ready"
     for name in ("source_media_review", "source_ingest_manifest"):
         artifact = json.loads(

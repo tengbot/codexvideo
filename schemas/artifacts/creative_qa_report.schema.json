@@ -8,6 +8,15 @@
     "version": {"const": "1.0"},
     "project_id": {"type": "string", "minLength": 1},
     "evaluated_at": {"type": ["string", "null"], "format": "date-time"},
+    "render_binding": {
+      "type": "object",
+      "required": ["video", "dependencies"],
+      "properties": {
+        "video": {"$ref": "#/$defs/file"},
+        "dependencies": {"type": "array", "items": {"$ref": "#/$defs/file"}}
+      },
+      "additionalProperties": false
+    },
     "checks": {
       "type": "object",
       "required": ["hook_pain", "consumer_viewpoint", "single_claim", "proof_visible", "visual_copy_match", "pacing", "brand_continuity", "cta", "technical_decode"],
@@ -18,6 +27,16 @@
     "blocking_issues": {"type": "array", "items": {"type": "string"}}
   },
   "$defs": {
+    "file": {
+      "type": "object",
+      "required": ["path", "sha256", "size_bytes"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "size_bytes": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
     "check": {
       "type": "object",
       "required": ["score", "passes", "evidence"],

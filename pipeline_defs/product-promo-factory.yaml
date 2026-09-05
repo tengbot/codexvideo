@@ -219,7 +219,8 @@ stages:
   - name: edit
     skill: pipelines/product-promo-factory/edit-director
     required_artifacts_in: [creative_brief, proposal_packet, decision_log, production_preset, scene_plan, asset_manifest, visual_match, audio_timeline]
-    produces: [edit_decisions, editable_timeline, campaign_plan]
+    produces: [edit_decisions, editable_timeline]
+    optional_produces: [campaign_plan]
     tools_available: [editable_timeline, campaign_batch]
     checkpoint_required: true
     human_approval_default: false
@@ -231,7 +232,8 @@ stages:
     skill: pipelines/product-promo-factory/compose-director
     required_artifacts_in: [edit_decisions, asset_manifest, creative_brief, proposal_packet, decision_log, production_preset, visual_continuity_bible]
     optional_artifacts_in: [editable_timeline, campaign_plan, shot_language_plan]
-    produces: [render_report, final_review, batch_run]
+    produces: [render_report, final_review]
+    optional_produces: [batch_run]
     required_tools: [video_compose, audio_mixer]
     optional_tools: [hyperframes_compose, campaign_batch, visual_qa]
     tools_available: [video_compose, hyperframes_compose, audio_mixer, campaign_batch, visual_qa]
