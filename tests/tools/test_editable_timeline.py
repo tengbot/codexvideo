@@ -76,6 +76,7 @@ def _project(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
             {
                 "id": "scene-1",
                 "source": "hero-video",
+                "audio_track": 1,
                 "in_seconds": 1,
                 "out_seconds": 6,
                 "speed": 1,

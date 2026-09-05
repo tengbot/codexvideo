@@ -335,6 +335,7 @@ class EditableTimeline(BaseTool):
             if cut.get("transform"):
                 element["transform"] = self._normalize_transform(cut["transform"])
             element["metadata"] = {
+                **({"audio_track": cut["audio_track"]} if "audio_track" in cut else {}),
                 "transition_in": cut.get("transition_in"),
                 "transition_out": cut.get("transition_out"),
                 "transition_duration": cut.get("transition_duration", 0),
@@ -688,7 +689,7 @@ class EditableTimeline(BaseTool):
                     if element.get("transform"):
                         cut["transform"] = self._edit_transform(element["transform"])
                     metadata = element.get("metadata") or {}
-                    for key in ("transition_in", "transition_out", "transition_duration"):
+                    for key in ("transition_in", "transition_out", "transition_duration", "audio_track"):
                         if metadata.get(key) is not None:
                             cut[key] = metadata[key]
                     if element.get("name"):

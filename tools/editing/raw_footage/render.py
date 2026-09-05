@@ -24,9 +24,11 @@ from tools.base_tool import (
 )
 
 from .models import (
+    file_sha256,
     group_subtitle_cues,
     load_transcript,
     parse_frame_rate,
+    probe_audio_streams,
     probe_media,
     read_json,
     resolve_safe_path,
@@ -149,6 +151,7 @@ class RawEditRender(BaseTool):
         boundary_warnings: list[str] = []
         grade_analyses: list[dict[str, Any]] = []
         source_fps_rates: dict[str, str] = {}
+        audio_selections: dict[tuple[str, int | None], int] = {}
 
         with tempfile.TemporaryDirectory(prefix="raw-edit-", dir=project_dir) as temp_value:
             temp_dir = Path(temp_value)
@@ -161,6 +164,10 @@ class RawEditRender(BaseTool):
                     cut["source"], base=edit_path.parent, allowed_roots=allowed_roots
                 )
                 source_info = probe_media(source)
+                audio_key = (str(source), cut.get("audio_track"))
+                if audio_key not in audio_selections:
+                    audio_selections[audio_key] = self._source_audio_track(source, cut, project_dir)
+                audio_track = audio_selections[audio_key]
                 source_fps_rates[str(source)] = str(source_info.get("fps_rate") or "unknown")
                 source_in = float(cut["in_seconds"])
                 source_out = float(cut["out_seconds"])
@@ -211,6 +218,7 @@ class RawEditRender(BaseTool):
                     fps=fps,
                     threads=threads,
                     has_audio=bool(source_info["has_audio"]),
+                    audio_track=audio_track,
                     is_hdr=is_hdr,
                     grade_filter=grade_filter,
                     encoder_preset=preset,
@@ -338,6 +346,36 @@ class RawEditRender(BaseTool):
             artifacts=artifacts,
             duration_seconds=duration,
         )
+
+    @staticmethod
+    def _source_audio_track(source: Path, cut: dict[str, Any], project_dir: Path) -> int:
+        streams = probe_audio_streams(source)
+        selected = cut.get("audio_track")
+        if selected is None:
+            selections: set[int] = set()
+            for path in (project_dir / "artifacts").glob("source_ingest*.json"):
+                manifest = read_json(path)
+                recorded_source = Path(manifest.get("source", {}).get("path", ""))
+                if not recorded_source.is_absolute():
+                    recorded_source = project_dir / recorded_source
+                if recorded_source.resolve() != source:
+                    continue
+                validate_artifact("source_ingest_manifest", manifest)
+                if manifest["source"]["sha256"] != file_sha256(source):
+                    raise ValueError(f"Source ingest is stale; ingest again: {source.name}")
+                track = manifest["audio"]["selected_track"]
+                if track is not None:
+                    selections.add(track)
+            if len(selections) > 1:
+                raise ValueError(f"Conflicting ingest audio tracks for {source.name}; set cut.audio_track")
+            selected = next(iter(selections), None)
+        if selected is None:
+            if len(streams) > 1:
+                raise ValueError(f"Select cut.audio_track or ingest this multi-track source: {source.name}")
+            return 0
+        if isinstance(selected, bool) or not isinstance(selected, int) or not 0 <= selected < len(streams):
+            raise ValueError(f"Audio track {selected!r} is unavailable in {source.name}")
+        return selected
 
     @staticmethod
     def _load_transcripts(paths: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -497,6 +535,7 @@ class RawEditRender(BaseTool):
         grade_filter: str,
         encoder_preset: str,
         crf: int,
+        audio_track: int = 0,
     ) -> None:
         command = ["ffmpeg", "-y", "-v", "error", "-i", str(source)]
         if not has_audio:
@@ -518,7 +557,7 @@ class RawEditRender(BaseTool):
             f"setpts=PTS/{speed:.6f},{scale}{grade_chain},fps={fps},format=yuv420p"
         )
         fade = min(0.03, output_duration / 3)
-        audio_input = "[0:a:0]" if has_audio else "[1:a:0]"
+        audio_input = f"[0:a:{audio_track}]" if has_audio else "[1:a:0]"
         audio_filter = (
             f"{audio_input}atrim=start={source_in if has_audio else 0:.6f}:"
             f"duration={source_duration if has_audio else output_duration:.6f},"

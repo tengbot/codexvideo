@@ -384,15 +384,15 @@ def create_project(
 def resume_project(project_dir: Path) -> dict[str, Any]:
     state = load_board_state(project_dir)
     active = next(
-        (stage for stage in state["stages"] if stage["status"] in {"in_progress", "awaiting_human"}),
+        (stage for stage in state["stages"] if stage["status"] != "completed"),
         None,
     )
-    pending = next((stage for stage in state["stages"] if stage["status"] == "pending"), None)
-    next_stage = (active or pending or {"name": None})["name"]
+    next_stage = active["name"] if active else None
     return {
         "project_id": state["project_id"],
         "pipeline": state["pipeline"]["pipeline_type"],
         "next_stage": next_stage,
+        "stage_status": active["status"] if active else "completed",
         "awaiting_human": bool(active and active["status"] == "awaiting_human"),
         "completed": [stage["name"] for stage in state["stages"] if stage["status"] == "completed"],
         "render_count": len(state["media"]["renders"]),

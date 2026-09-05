@@ -39,11 +39,11 @@ def choose_format(
 
     text = prompt.lower()
     keyword_routes = (
-        ("ai-podcast", ("podcast", "two host", "two-host", "dialogue", "conversation")),
-        ("faceless", ("faceless", "no presenter", "narration only")),
-        ("avatar", ("avatar", "digital human", "spokesperson")),
-        ("screen-demo", ("screen demo", "walkthrough", "tutorial", "recording")),
-        ("clip", ("clip", "repurpose", "highlights", "livestream")),
+        ("ai-podcast", ("podcast", "two host", "two-host", "dialogue", "conversation", "播客", "双人", "两个人对话")),
+        ("faceless", ("faceless", "no presenter", "narration only", "无脸", "无人旁白", "纯旁白")),
+        ("avatar", ("avatar", "digital human", "spokesperson", "数字人")),
+        ("screen-demo", ("screen demo", "walkthrough", "tutorial", "recording", "录屏", "操作演示")),
+        ("clip", ("clip", "repurpose", "highlights", "livestream", "切片", "直播剪辑")),
     )
     for format_id, needles in keyword_routes:
         if any(needle in text for needle in needles):
@@ -73,5 +73,15 @@ def destination_settings(destination: str, aspect: str | None) -> dict[str, Any]
         raise ValueError(f"Unknown destination: {destination}")
     settings = dict(catalog["destinations"][destination])
     if aspect:
+        if aspect not in {"9:16", "1:1", "16:9"}:
+            raise ValueError(f"Unsupported aspect ratio: {aspect}")
+        if aspect != settings["aspect"]:
+            short_edge = min(settings["width"], settings["height"])
+            long_edge = round(short_edge * 16 / 9 / 2) * 2
+            settings["width"], settings["height"] = {
+                "9:16": (short_edge, long_edge),
+                "16:9": (long_edge, short_edge),
+                "1:1": (short_edge, short_edge),
+            }[aspect]
         settings["aspect"] = aspect
     return settings
