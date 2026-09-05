@@ -14,10 +14,10 @@ setup(
         "Pillow>=10.0",
         "numpy>=1.24",
         "requests>=2.31",
-        "google-genai>=1.0.0",
-        "openai>=2.44.0",
     ],
     extras_require={
+        "providers": ["google-auth>=2.0", "google-genai>=1.0.0", "openai>=2.44.0"],
+        "board": ["fastapi>=0.110", "uvicorn>=0.29", "watchfiles>=0.21"],
         "stt": ["faster-whisper>=1.2,<2"],
     },
     entry_points={

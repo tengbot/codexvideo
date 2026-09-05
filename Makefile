@@ -1,5 +1,6 @@
 PYTHON_VERSION ?= 3.10
 VENV_DIR ?= .venv
+HYPERFRAMES_VERSION ?= 0.8.29
 BASE_PYTHON ?= $(shell command -v python$(PYTHON_VERSION) 2>/dev/null || command -v python3 2>/dev/null || command -v python 2>/dev/null)
 RUN_PYTHON = $(shell for dir in "$$VIRTUAL_ENV" "$$CONDA_PREFIX" "$(VENV_DIR)"; do if [ -n "$$dir" ] && [ -x "$$dir/bin/python" ]; then printf "%s/bin/python" "$$dir"; exit 0; elif [ -n "$$dir" ] && [ -x "$$dir/Scripts/python.exe" ]; then printf "%s/Scripts/python.exe" "$$dir"; exit 0; fi; done; if [ "$(OS)" = "Windows_NT" ]; then printf "%s/Scripts/python.exe" "$(VENV_DIR)"; else printf "%s/bin/python" "$(VENV_DIR)"; fi)
 PIP = $(RUN_PYTHON) -m pip
@@ -7,6 +8,7 @@ PIP = $(RUN_PYTHON) -m pip
 .DEFAULT_GOAL := setup
 
 .PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight demo demo-list hyperframes-doctor hyperframes-warm doctor routes styles venv ensure-venv
+.PHONY: install-remotion install-hyperframes install-providers install-board install-piper
 
 # ---- Virtual environment ----
 
@@ -52,31 +54,33 @@ venv: ensure-venv
 # ---- One-command setup ----
 
 setup: ensure-venv
-	@echo "==> Installing Python dependencies..."
-	$(PIP) install -r requirements.txt
+	@echo "==> Installing the lightweight local CLI (no models or renderers)..."
+	$(PIP) install -r requirements-core.txt
 	$(PIP) install -e . --no-deps --no-build-isolation
-	@echo ""
-	@echo "==> Installing Remotion composer..."
-	cd remotion-composer && npm install
-	@echo ""
-	@echo "==> Installing free offline TTS (Piper)..."
-	$(PIP) install piper-tts || echo "  [skip] piper-tts install failed — TTS will use cloud providers instead"
-	@echo ""
-	@echo "==> Installing HyperFrames runtime (cache-warm via npx)..."
-	@echo "    Pulls the 'hyperframes' npm package into the local npx cache so the"
-	@echo "    first render doesn't pay a 30-60s cold-fetch penalty. ~20MB of disk."
-	@npx --yes hyperframes --version >/dev/null 2>&1 && echo "    HyperFrames CLI cached (npx)" || echo "  [skip] HyperFrames cache-warm failed — offline or npm unavailable; first render will fetch on demand"
-	@$(RUN_PYTHON) -c "from tools.video.hyperframes_compose import HyperFramesCompose; HyperFramesCompose._npm_resolve_cache=None; c=HyperFramesCompose()._runtime_check(); print(f'    HyperFrames runtime_available={c[\"runtime_available\"]}, npm={c.get(\"npm_package_version\") or c.get(\"npm_resolve_error\")}'); [print(f'    note: {r}') for r in c['reasons']]" || echo "  [skip] HyperFrames check failed — runtime can be set up later"
 	@echo ""
 	$(RUN_PYTHON) -c "import shutil, os; e=os.path.exists('.env'); shutil.copy('.env.example','.env') if not e else None; print('==> Created .env from .env.example — add your API keys there.' if not e else '==> .env already exists — skipping.')"
 	@echo ""
-	@echo "Done! Open this project in your AI coding assistant and start creating."
-	@echo "  Optional: add API keys to .env to unlock cloud providers."
-	@echo "  Optional: run 'make install-gpu' if you have an NVIDIA GPU."
-	@echo "  Optional: run 'make hyperframes-doctor' to fully validate the HyperFrames runtime."
-	@echo "  Optional: run 'make hyperframes-warm' anytime to refresh the npx cache to the latest hyperframes version."
+	@echo "Planning CLI ready. Use $(RUN_PYTHON) -m codexvideo doctor."
+	@echo "Choose a renderer with Codex before make install-remotion or install-hyperframes."
+	@echo "Provider SDKs, the board, local speech, and GPU models are opt-in."
 
 # ---- Individual installs ----
+
+install-remotion:
+	cd remotion-composer && npm ci
+
+install-hyperframes:
+	npx --yes hyperframes@$(HYPERFRAMES_VERSION) --version
+
+install-providers: ensure-venv
+	$(PIP) install -e '.[providers]'
+
+install-board: ensure-venv
+	$(PIP) install -e '.[board]'
+
+install-piper: ensure-venv
+	$(PIP) install piper-tts
+	@echo "Select and approve a voice model separately. No model was downloaded by this target."
 
 install: ensure-venv
 	$(PIP) install -r requirements.txt
@@ -116,9 +120,8 @@ hyperframes-doctor: ensure-venv
 	$(RUN_PYTHON) -c "from tools.video.hyperframes_compose import HyperFramesCompose; r=HyperFramesCompose().execute({'operation':'doctor'}); import json; print(json.dumps(r.data, indent=2)); print('OK' if r.success else f'FAIL: {r.error}')"
 
 hyperframes-warm:
-	@echo "==> Refreshing the HyperFrames npx cache to latest..."
-	@echo "    Uses --prefer-online so npx picks up new releases since your last run."
-	npx --yes --prefer-online hyperframes --version
+	@echo "==> Caching the explicitly selected HyperFrames version: $(HYPERFRAMES_VERSION)"
+	npx --yes hyperframes@$(HYPERFRAMES_VERSION) --version
 	@echo "==> Cache warm complete."
 
 demo: ensure-venv

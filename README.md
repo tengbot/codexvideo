@@ -13,9 +13,11 @@ CodexVideo researches the audience, finds the pain behind the search, writes the
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?logo=python&logoColor=white)](Makefile)
 [![Built on OpenMontage](https://img.shields.io/badge/built_on-OpenMontage-e85d3f.svg)](https://github.com/calesthio/OpenMontage)
 
-**16 production pipelines | 131 registered tools | 29 capabilities**
+**16 pipeline definitions | Local-first | Explicit provider and approval gates**
 
-**No API key is required for the first render.** Run the checked-in Remotion demos locally, then add only the providers your production actually needs.
+**No API key is required for the included motion-graphics demos.** Install the
+Remotion renderer explicitly to run them. Natural voice, generated footage,
+and lip-synced hosts require suitable media or configured providers.
 
 ![CodexVideo workflow from audience insight and storyboarding to product, faceless, and podcast video](assets/codexvideo-hero.png)
 
@@ -91,7 +93,24 @@ cd codexvideo
 make setup
 ```
 
-`make setup` creates a Python environment, installs the Remotion composer, prepares optional local TTS, warms the HyperFrames runtime, and creates an ignored `.env` from `.env.example`.
+`make setup` creates a Python environment, installs only the core planning and
+validation dependencies, and creates an ignored `.env` from `.env.example`.
+It does not install renderers, download speech models, or call a paid provider.
+Keep the Git checkout: the supported distribution is this repository plus an
+editable install, not a standalone wheel detached from its skills and schemas.
+
+Choose only the extras needed for the approved production:
+
+```bash
+make install-remotion    # locked Node dependencies for Remotion
+make install-hyperframes # explicit HyperFrames version from Makefile
+make install-providers  # optional Python SDKs, no API keys supplied
+make install-board      # optional local production board
+```
+
+Use `.venv/bin/python -m codexvideo` without activating the environment, or
+activate `.venv` before using the `codexvideo` command below. On Windows, use
+`.venv\Scripts\python.exe -m codexvideo`.
 
 ### Create a production project
 
@@ -110,6 +129,12 @@ The command creates a resumable project under `projects/` with a consumer
 request, live capability manifest, pipeline run plan, preview-first budget
 policy, creative QA template, and a `CODEX_TASK.md` that Codex can execute.
 No provider is silently selected and no paid media call occurs during setup.
+
+`planning_ready` is not `render_ready`: the selected voice, assets, permissions,
+runtime, budget, and creative approvals still need verification. Faceless and
+podcast formats share the consumer research, proof, continuity, and script QA
+contracts with product promotion. `create` scaffolds this process; Codex drives
+it. This is not an unattended URL-to-video service.
 
 To start from an existing recording, podcast, screen capture, or generated
 take, pass it directly to the same front door:
@@ -130,6 +155,7 @@ resumable ingest manifest. It does not start ASR or upload audio by itself.
 
 ```bash
 make demo-list
+make install-remotion
 make demo
 ```
 

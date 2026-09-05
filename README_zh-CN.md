@@ -210,11 +210,14 @@ VIDEO_GEN_LOCAL_MODEL=wan2.2-ti2v-5b  # 或 wan2.1-1.3b, wan2.1-14b, hunyuan-1.5
 
 ## 零 API 密钥的体验
 
-您不需要付费 API 密钥就能制作出真正的视频。开箱即用的 `make setup` 会为您提供：
+`make setup` 现在只安装轻量 CLI、研究与数据验证依赖，不安装渲染器，也不下载语音模型。
+下列能力按需启用，并非默认就绪。先选择 `make install-remotion` 或
+`make install-hyperframes`；供应商 SDK 和看板分别用 `make install-providers`
+和 `make install-board`。无需 API key 的内置动效演示需要先安装 Remotion。
 
 | 能力 | 免费工具 | 功能 |
 |-----------|-----------|-------------|
-| **旁白配音** | Piper TTS | 免费离线文本转语音 — 逼真的真人发音旁白 |
+| **旁白配音** | Piper TTS（可选） | 需要单独安装和选择模型；实际音质须试听，不保证真人广告质感 |
 | **开源影像素材** | Archive.org + NASA + Wikimedia Commons | 免费/开源档案影像、教育媒体及纪录片素材 |
 | **额外素材库** | Pexels + Unsplash + Pixabay | 免费库存影像/图片（开发者密钥可免费获取） |
 | **合成 (React)** | Remotion | 基于 React 的渲染 — 带弹簧动画的图片场景、文字卡片、数据卡片、图表、TikTok 风格词级字幕、数字人开口说话 (TalkingHead) |
@@ -224,7 +227,7 @@ VIDEO_GEN_LOCAL_MODEL=wan2.2-ti2v-5b  # 或 wan2.1-1.3b, wan2.1-14b, hunyuan-1.5
 
 OpenMontage 会在提案阶段在 Remotion 和 HyperFrames 之间进行选择（锁定为 `render_runtime`）。Remotion 是数据驱动解说和任何使用现有 React 场景堆栈内容的默认选择；HyperFrames 则是大量使用动态图形且更自然表达为 HTML + GSAP 的需求的默认选择，包括 `character-animation` 流水线的 SVG/GSAP 绑定输出。详见 `skills/core/hyperframes.md` 了解完整的决策矩阵。
 
-**两条近乎免费的路径：**
+**需要相应依赖及素材的本地路径：**
 
 - **基于图像的视频：** Piper 为您的脚本配音，图像提供视觉效果，而 Remotion 将其动画化为精心打磨的剪辑。
 - **本地角色动画：** SVG 绑定、姿势库、GSAP 时间线以及 HyperFrames 会渲染卡通角色表演，输出到 `projects/<project-name>/renders/final.mp4`。
